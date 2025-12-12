@@ -1,0 +1,11 @@
+# Node / tooling
+node_modules/
+dist/
+build/
+
+# Mac & editor junk
+.DS_Store
+*.log
+
+# If you later add any build artifacts
+*.zip
