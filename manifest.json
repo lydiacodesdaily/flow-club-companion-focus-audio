@@ -25,7 +25,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["audio/**/*.mp3", "audio/**/*.m4a"],
+      "resources": ["audio/**/*.mp3"],
       "matches": ["https://in.flow.club/*"]
     }
   ]

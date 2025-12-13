@@ -3,7 +3,7 @@
 // Runs on: https://in.flow.club/*
 // Provides: Tick sounds + voice announcements during Flow Club sessions
 
-console.log('[Flow Club Audio] Content script loaded on', location.href);
+// Content script loaded
 
 // ============================================================================
 // Timer Detection (kept from original)
@@ -155,7 +155,6 @@ class AudioPlayer {
       // Breaks are typically 5, 10, or 15 minutes at Flow Club
       this.isCurrentSessionBreak = initialMinutes <= 15 &&
         (initialMinutes === 5 || initialMinutes === 10 || initialMinutes === 15);
-      console.log(`[Flow Club Audio] New session detected: ${initialMinutes} min, isBreak: ${this.isCurrentSessionBreak}`);
     }
     return this.isCurrentSessionBreak;
   }
@@ -192,25 +191,21 @@ class AudioPlayer {
 
     if (seconds === 0 && minutes >= 1 && minutes <= 25) {
       const minuteFile = `audio/minutes/m${String(minutes).padStart(2, '0')}.mp3`;
-      console.log(`[Flow Club Audio] Playing ${minutes} minutes`);
       await this.playVoice(minuteFile, isBreak);
       return; // Don't play tick on exact minute announcements
     }
 
     // Ding every 5 minutes for sessions > 25 minutes
     if (seconds === 0 && minutes > 25 && minutes % 5 === 0) {
-      console.log(`[Flow Club Audio] Playing ding at ${minutes} minutes`);
       await this.playDing(isBreak);
       return;
     }
 
     // Second announcements: 50, 40, 30, 20, 10 seconds
-    // Need to check both total remainingSeconds AND when in final minute (0:50, 0:40, etc)
     if (remainingSeconds === 50 || remainingSeconds === 40 ||
         remainingSeconds === 30 || remainingSeconds === 20 ||
         remainingSeconds === 10) {
       const secondFile = `audio/seconds/s${remainingSeconds}.mp3`;
-      console.log(`[Flow Club Audio] Playing ${remainingSeconds} seconds`);
       await this.playVoice(secondFile, isBreak);
       return;
     }
@@ -218,7 +213,6 @@ class AudioPlayer {
     // Final countdown: 9, 8, 7, ..., 1
     if (remainingSeconds >= 1 && remainingSeconds <= 9) {
       const secondFile = `audio/seconds/s${String(remainingSeconds).padStart(2, '0')}.mp3`;
-      console.log(`[Flow Club Audio] Playing ${remainingSeconds} seconds`);
       await this.playVoice(secondFile, isBreak);
       return;
     }
@@ -254,7 +248,6 @@ class FlowClubAudioCompanion {
     }
     if (!this.lockedTimerEl && this.changeCount >= 2) {
       this.lockedTimerEl = candidateEl;
-      console.log('[Flow Club Audio] Timer element locked');
     }
 
     const elToUse = this.lockedTimerEl?.isConnected ? this.lockedTimerEl : candidateEl;
@@ -267,7 +260,6 @@ class FlowClubAudioCompanion {
     if (hasChanged) {
       // Clear old cues when timer jumps (new session started)
       if (this.lastSeenSeconds != null && seconds > this.lastSeenSeconds + 10) {
-        console.log('[Flow Club Audio] New session detected, resetting');
         this.audioPlayer.resetSession();
       }
 
@@ -293,7 +285,6 @@ class FlowClubAudioCompanion {
   start() {
     if (this.intervalId != null) return;
 
-    console.log('[Flow Club Audio] Starting audio companion');
     this.intervalId = setInterval(() => this.poll(), 1000);
     this.startTickInterval();
     this.poll(); // Initial poll
@@ -308,7 +299,6 @@ class FlowClubAudioCompanion {
       clearInterval(this.tickIntervalId);
       this.tickIntervalId = null;
     }
-    console.log('[Flow Club Audio] Stopped');
   }
 }
 
@@ -322,7 +312,4 @@ window.addEventListener('beforeunload', () => companion.stop());
 window.addEventListener('pagehide', () => companion.stop());
 
 // Wait for page to load, then start
-setTimeout(() => {
-  companion.start();
-  console.log('[Flow Club Audio] Companion initialized and running');
-}, 1000);
+setTimeout(() => companion.start(), 1000);

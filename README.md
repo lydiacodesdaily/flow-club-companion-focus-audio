@@ -80,7 +80,6 @@ All audio files are included in the `/audio/` directory:
 - `/audio/effects/` - tick1.mp3, tok1.mp3, ding.mp3
 - `/audio/minutes/` - m01.mp3 through m25.mp3
 - `/audio/seconds/` - s01.mp3 through s09.mp3, s10.mp3, s20.mp3, s30.mp3, s40.mp3, s50.mp3
-- `/audio/transitions/` - focus.mp3, break.mp3, done.mp3 (optional)
 
 ---
 
