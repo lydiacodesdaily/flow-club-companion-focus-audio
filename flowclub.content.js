@@ -1,12 +1,15 @@
 // flowclub.content.js
-// Runs on: https://*.flow.club/*
-// Extracts: timer, title, duration
-// Provides UI for manual session control
+// Flow Club Audio Companion - Content Script
+// Runs on: https://in.flow.club/*
+// Provides: Tick sounds + voice announcements during Flow Club sessions
 
-console.log('[Flowmate Sync] flowclub.content.js — start', location.href);
+console.log('[Flow Club Audio] Content script loaded on', location.href);
+
+// ============================================================================
+// Timer Detection (kept from original)
+// ============================================================================
 
 const TIME_RE = /^\d{1,2}:\d{2}(:\d{2})?$/;
-const DURATION_RE = /\b(30|60|90|120|180)\s*min\b/i;
 
 function parseTimeToSeconds(text) {
   if (!text) return null;
@@ -23,78 +26,16 @@ function isVisible(el) {
   return r.width > 0 && r.height > 0;
 }
 
-function sanitizeTitle(raw) {
-  if (!raw) return null;
-  return raw.replace(/\b\d{1,2}:\d{2}\b/g, '').replace(/\s+/g, ' ').trim();
-}
-
-function findSessionTitleElement() {
-  const root = document.getElementById('root') || document.body;
-  const els = Array.from(root.querySelectorAll('div, span')).filter((el) => {
-    if (!isVisible(el)) return false;
-    const t = (el.textContent || '').replace(/\s+/g, ' ').trim();
-    return t && t.includes('Flow Club') && DURATION_RE.test(t) && t.length < 200;
-  });
-  return els[0] || null;
-}
-
-function extractCleanTitleFromElement(el) {
-  if (!el) return null;
-  const textNodes = Array.from(el.childNodes || [])
-    .filter((n) => n.nodeType === Node.TEXT_NODE)
-    .map((n) => n.textContent.trim())
-    .filter(Boolean);
-  if (textNodes.length) {
-    const candidate = textNodes[0].replace(/\s+/g, ' ').trim();
-    if (candidate && !TIME_RE.test(candidate)) return candidate;
-  }
-  const full = (el.textContent || '').replace(/\s+/g, ' ').trim();
-  return full || null;
-}
-
-function readSessionTitleAndDuration() {
-  const titleEl = findSessionTitleElement();
-  const raw = titleEl ? extractCleanTitleFromElement(titleEl) : null;
-  const titleText = sanitizeTitle(raw);
-  let durationMinutes = null;
-  if (raw) {
-    const m = raw.match(DURATION_RE);
-    if (m) durationMinutes = Number(m[1]);
-  }
-  return { titleText, durationMinutes, titleEl };
-}
-
-function readNearbyPhaseLabel(titleEl) {
-  if (!titleEl) return null;
-  const parent = titleEl.parentElement || document.body;
-  const nearby = Array.from(parent.querySelectorAll('div, span, p, small')).filter(
-    (el) => el !== titleEl && isVisible(el)
-  );
-  for (const el of nearby) {
-    const t = (el.textContent || '').replace(/\s+/g, ' ').trim();
-    if (!t || TIME_RE.test(t) || t.length > 30 || t.includes('Flow Club')) continue;
-    return t;
-  }
-  return null;
-}
-
 function getTimerElement() {
-  const { titleEl } = readSessionTitleAndDuration();
-  if (titleEl) {
-    let container = titleEl;
-    for (let i = 0; i < 4; i++) container = container.parentElement || container;
-    const localTimers = Array.from(container.querySelectorAll('div, span')).filter(
-      (el) => isVisible(el) && TIME_RE.test((el.textContent || '').trim())
-    );
-    if (localTimers.length) return localTimers[0];
-  }
   const root = document.getElementById('root') || document.body;
   const candidates = Array.from(root.querySelectorAll('div, span')).filter(
     (el) => isVisible(el) && TIME_RE.test((el.textContent || '').trim())
   );
   if (!candidates.length) return null;
-  let best = candidates[0],
-    bestSize = 0;
+
+  // Find the largest timer (by font size)
+  let best = candidates[0];
+  let bestSize = 0;
   for (const c of candidates) {
     const fs = parseFloat(getComputedStyle(c).fontSize || '0');
     if (fs > bestSize) {
@@ -106,390 +47,249 @@ function getTimerElement() {
 }
 
 // ============================================================================
-// Storage & State Management
+// Audio System
 // ============================================================================
 
-let sessionState = {
-  currentBlock: null, // 1-based block number (user-friendly)
-  sessionType: 'focus', // focus or break
-  sessionStyle: 'non-pomodoro', // pomodoro or non-pomodoro
-};
+class AudioPlayer {
+  constructor() {
+    this.audioCache = new Map();
+    this.settings = {
+      tickEnabled: true,
+      voiceEnabled: true,
+      muteDuringBreaks: false,
+      tickVolume: 0.7,
+      voiceVolume: 0.9
+    };
+    this.currentTick = 0; // Alternates between 0 and 1 for tick1/tok1
+    this.lastPlayedCues = new Set(); // Prevent duplicate plays
 
-// No longer needed - users manually set block type
+    // Load settings from storage
+    this.loadSettings();
 
-function loadSessionState() {
-  try {
+    // Listen for settings changes
+    chrome.storage.onChanged.addListener((_changes, area) => {
+      if (area === 'local') {
+        this.loadSettings();
+      }
+    });
+  }
+
+  loadSettings() {
     chrome.storage.local.get(
-      ['flowclubCurrentBlock', 'flowclubCurrentSessionType', 'flowclubSessionStyle'],
+      ['tickEnabled', 'voiceEnabled', 'muteDuringBreaks', 'tickVolume', 'voiceVolume'],
       (data) => {
-        if (data.flowclubCurrentBlock != null) sessionState.currentBlock = data.flowclubCurrentBlock;
-        if (data.flowclubCurrentSessionType) sessionState.sessionType = data.flowclubCurrentSessionType;
-        if (data.flowclubSessionStyle) sessionState.sessionStyle = data.flowclubSessionStyle;
-        updateUI();
+        if (data.tickEnabled !== undefined) this.settings.tickEnabled = data.tickEnabled;
+        if (data.voiceEnabled !== undefined) this.settings.voiceEnabled = data.voiceEnabled;
+        if (data.muteDuringBreaks !== undefined) this.settings.muteDuringBreaks = data.muteDuringBreaks;
+        if (data.tickVolume !== undefined) this.settings.tickVolume = data.tickVolume;
+        if (data.voiceVolume !== undefined) this.settings.voiceVolume = data.voiceVolume;
       }
     );
-  } catch (e) {
-    console.error('[Flowmate Sync] Failed to load state:', e);
   }
-}
 
-let lastWrite = {
-  seconds: null,
-  durationMinutes: null,
-  titleText: null,
-  sessionIndex: null,
-  sessionType: null,
-  completedCount: null,
-  phaseLabel: null,
-  sessionStyle: null,
-  atMs: 0,
-};
-const WRITE_EVERY_MS = 5000;
+  getAudio(path, volume = 1.0) {
+    if (!this.audioCache.has(path)) {
+      const audio = new Audio(chrome.runtime.getURL(path));
+      audio.volume = volume;
+      this.audioCache.set(path, audio);
+    }
+    const audio = this.audioCache.get(path);
+    audio.volume = volume;
+    return audio;
+  }
 
-function shouldWrite(fields) {
-  const now = Date.now();
-  if (lastWrite.seconds == null) return true;
-  if (fields.durationMinutes !== lastWrite.durationMinutes) return true;
-  if (fields.titleText !== lastWrite.titleText) return true;
-  if (fields.sessionIndex !== lastWrite.sessionIndex) return true;
-  if (fields.sessionType !== lastWrite.sessionType) return true;
-  if (fields.completedCount !== lastWrite.completedCount) return true;
-  if (fields.phaseLabel !== lastWrite.phaseLabel) return true;
-  if (fields.sessionStyle !== lastWrite.sessionStyle) return true;
-  if (now - lastWrite.atMs >= WRITE_EVERY_MS) return true;
-  return false;
-}
+  async playTick() {
+    if (!this.settings.tickEnabled) return;
 
-function writeToStorage(payload) {
-  if (!shouldWrite(payload)) return;
-  const { seconds, titleText, durationMinutes, sessionIndex, sessionType, completedCount, phaseLabel, sessionStyle } =
-    payload;
-  try {
-    chrome.storage.local.set({
-      flowclubTimerSeconds: seconds,
-      flowclubTimerUpdatedAt: Date.now(),
-      flowclubSessionDurationMinutes: durationMinutes || null,
-      flowclubSessionTitle: titleText || null,
-      flowclubCurrentSessionIndex: sessionIndex,
-      flowclubCurrentSessionType: sessionType,
-      flowclubCompletedCount: completedCount,
-      flowclubPhaseLabel: phaseLabel || null,
-      flowclubSessionStyle: sessionStyle || null,
-      flowclubCurrentBlock: sessionState.currentBlock,
-    });
-    lastWrite = {
-      seconds,
-      durationMinutes,
-      titleText,
-      sessionIndex,
-      sessionType,
-      completedCount,
-      phaseLabel,
-      sessionStyle,
-      atMs: Date.now(),
-    };
-    console.log('[Flowmate Sync] write', {
-      seconds,
-      titleText,
-      durationMinutes,
-      sessionIndex,
-      sessionType,
-      completedCount,
-      phaseLabel,
-      sessionStyle,
-      at: new Date().toISOString(),
-    });
-  } catch (err) {
-    const msg = String(err?.message || err);
-    if (msg.includes('Extension context invalidated')) {
-      stop();
+    try {
+      // Alternate between tick1 and tok1
+      const tickFile = this.currentTick === 0 ? 'audio/effects/tick1.mp3' : 'audio/effects/tok1.mp3';
+      this.currentTick = 1 - this.currentTick;
+
+      const audio = this.getAudio(tickFile, this.settings.tickVolume);
+      audio.currentTime = 0; // Reset to start
+      await audio.play();
+    } catch (err) {
+      // Silently fail - might be autoplay restriction
+      console.debug('[Flow Club Audio] Tick play failed:', err.message);
+    }
+  }
+
+  async playVoice(path) {
+    if (!this.settings.voiceEnabled) return;
+
+    try {
+      const audio = this.getAudio(path, this.settings.voiceVolume);
+      audio.currentTime = 0;
+      await audio.play();
+    } catch (err) {
+      console.debug('[Flow Club Audio] Voice play failed:', err.message);
+    }
+  }
+
+  async playDing() {
+    if (!this.settings.voiceEnabled) return;
+
+    try {
+      const audio = this.getAudio('audio/effects/ding.mp3', this.settings.voiceVolume);
+      audio.currentTime = 0;
+      await audio.play();
+    } catch (err) {
+      console.debug('[Flow Club Audio] Ding play failed:', err.message);
+    }
+  }
+
+  // Process timer updates and play appropriate cues
+  async processTimerUpdate(remainingSeconds) {
+    if (remainingSeconds === null || remainingSeconds < 0) return;
+
+    const cueKey = `${remainingSeconds}`;
+
+    // Avoid replaying the same cue (only trigger on boundary crossing)
+    if (this.lastPlayedCues.has(cueKey)) return;
+
+    // Clear old cues (keep only recent ones to prevent memory bloat)
+    if (this.lastPlayedCues.size > 100) {
+      this.lastPlayedCues.clear();
+    }
+
+    this.lastPlayedCues.add(cueKey);
+
+    // Minute announcements: 25, 24, 23, ..., 1 minute
+    const minutes = Math.floor(remainingSeconds / 60);
+    const seconds = remainingSeconds % 60;
+
+    if (seconds === 0 && minutes >= 1 && minutes <= 25) {
+      const minuteFile = `audio/minutes/m${String(minutes).padStart(2, '0')}.mp3`;
+      console.log(`[Flow Club Audio] Playing ${minutes} minutes`);
+      await this.playVoice(minuteFile);
+      return; // Don't play tick on exact minute announcements
+    }
+
+    // Ding every 5 minutes for sessions > 25 minutes
+    if (seconds === 0 && minutes > 25 && minutes % 5 === 0) {
+      console.log(`[Flow Club Audio] Playing ding at ${minutes} minutes`);
+      await this.playDing();
       return;
     }
-    console.error('[Flowmate Sync] storage write failed:', err);
+
+    // Second announcements: 50, 40, 30, 20, 10, then 9-1
+    if (remainingSeconds === 50 || remainingSeconds === 40 ||
+        remainingSeconds === 30 || remainingSeconds === 20 ||
+        remainingSeconds === 10) {
+      const secondFile = `audio/seconds/s${remainingSeconds}.mp3`;
+      console.log(`[Flow Club Audio] Playing ${remainingSeconds} seconds`);
+      await this.playVoice(secondFile);
+      return;
+    }
+
+    // Final countdown: 9, 8, 7, ..., 1
+    if (remainingSeconds >= 1 && remainingSeconds <= 9) {
+      const secondFile = `audio/seconds/s${String(remainingSeconds).padStart(2, '0')}.mp3`;
+      console.log(`[Flow Club Audio] Playing ${remainingSeconds} seconds`);
+      await this.playVoice(secondFile);
+      return;
+    }
   }
 }
 
 // ============================================================================
-// UI Control Panel
+// Main Polling Loop
 // ============================================================================
 
-function createUI() {
-  const panel = document.createElement('div');
-  panel.id = 'flowmate-control-panel';
-  panel.style.cssText = `
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: white;
-    border: 2px solid #5D5FEF;
-    border-radius: 12px;
-    padding: 16px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    z-index: 999999;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    font-size: 14px;
-    min-width: 320px;
-    max-width: 400px;
-  `;
+class FlowClubAudioCompanion {
+  constructor() {
+    this.audioPlayer = new AudioPlayer();
+    this.intervalId = null;
+    this.lockedTimerEl = null;
+    this.lastTimerTextSeen = null;
+    this.changeCount = 0;
+    this.lastSeenSeconds = null;
+    this.tickIntervalId = null;
+  }
 
-  panel.innerHTML = `
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-      <strong style="color: #5D5FEF; font-size: 16px;">Flowmate Sync</strong>
-      <button id="flowmate-toggle" style="background: none; border: none; cursor: pointer; font-size: 18px; padding: 0;">−</button>
-    </div>
-    <div id="flowmate-controls">
-      <div style="margin-bottom: 12px;">
-        <label style="display: block; margin-bottom: 6px; font-weight: 500;">Session Style:</label>
-        <div style="display: flex; gap: 8px;">
-          <button class="flowmate-style-btn" data-style="non-pomodoro"
-            style="flex: 1; padding: 8px; border: 2px solid #ddd; border-radius: 6px; background: white; cursor: pointer; font-weight: 500;">
-            Non-Pomodoro
-          </button>
-          <button class="flowmate-style-btn" data-style="pomodoro"
-            style="flex: 1; padding: 8px; border: 2px solid #ddd; border-radius: 6px; background: white; cursor: pointer; font-weight: 500;">
-            Pomodoro
-          </button>
-        </div>
-      </div>
-      <div style="margin-bottom: 12px;">
-        <label style="display: block; margin-bottom: 6px; font-weight: 500;">Which block are you on?</label>
-        <div style="margin-bottom: 6px; font-size: 12px; color: #666; font-style: italic;">
-          Breaks count as blocks too
-        </div>
-        <input type="number" id="flowmate-block-input" min="1" max="20"
-          style="width: 100%; padding: 8px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px;"
-          placeholder="Enter block number (e.g., 4)">
-      </div>
-      <div style="margin-bottom: 12px;">
-        <label style="display: block; margin-bottom: 6px; font-weight: 500;">Block Type:</label>
-        <div style="display: flex; gap: 8px;">
-          <button class="flowmate-type-btn" data-type="focus"
-            style="flex: 1; padding: 8px; border: 2px solid #ddd; border-radius: 6px; background: white; cursor: pointer; font-weight: 500;">
-            Focus
-          </button>
-          <button class="flowmate-type-btn" data-type="break"
-            style="flex: 1; padding: 8px; border: 2px solid #ddd; border-radius: 6px; background: white; cursor: pointer; font-weight: 500;">
-            Break
-          </button>
-        </div>
-      </div>
-      <div style="margin-top: 12px; padding: 10px; background: #f5f5f5; border-radius: 6px; font-size: 13px;">
-        <div style="margin-bottom: 4px;"><strong>Current:</strong> Block <span id="flowmate-display-block">—</span> (<span id="flowmate-display-type">—</span>)</div>
-      </div>
-    </div>
-  `;
+  poll() {
+    const candidateEl = this.lockedTimerEl?.isConnected ? this.lockedTimerEl : getTimerElement();
+    if (!candidateEl) return;
 
-  document.body.appendChild(panel);
+    const rawText = (candidateEl.textContent || '').trim();
+    if (!TIME_RE.test(rawText)) return;
 
-  // Toggle minimize/maximize
-  const toggleBtn = document.getElementById('flowmate-toggle');
-  const controls = document.getElementById('flowmate-controls');
-  toggleBtn.addEventListener('click', () => {
-    const isHidden = controls.style.display === 'none';
-    controls.style.display = isHidden ? 'block' : 'none';
-    toggleBtn.textContent = isHidden ? '−' : '+';
-  });
+    // Lock onto timer element once we see it change a couple times
+    if (rawText !== this.lastTimerTextSeen) {
+      this.changeCount += 1;
+      this.lastTimerTextSeen = rawText;
+    }
+    if (!this.lockedTimerEl && this.changeCount >= 2) {
+      this.lockedTimerEl = candidateEl;
+      console.log('[Flow Club Audio] Timer element locked');
+    }
 
-  // Session style button handlers
-  document.querySelectorAll('.flowmate-style-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const style = btn.getAttribute('data-style');
-      sessionState.sessionStyle = style;
+    const elToUse = this.lockedTimerEl?.isConnected ? this.lockedTimerEl : candidateEl;
+    const seconds = parseTimeToSeconds((elToUse.textContent || '').trim());
+    if (seconds == null) return;
 
-      // Update button styles
-      document.querySelectorAll('.flowmate-style-btn').forEach(b => {
-        b.style.background = 'white';
-        b.style.borderColor = '#ddd';
-        b.style.color = 'black';
-      });
-      btn.style.background = '#5D5FEF';
-      btn.style.borderColor = '#5D5FEF';
-      btn.style.color = 'white';
+    // Check if timer value changed significantly (boundary crossing)
+    const hasChanged = this.lastSeenSeconds === null || this.lastSeenSeconds !== seconds;
 
-      updateUI();
+    if (hasChanged) {
+      // Process voice announcements and special cues
+      this.audioPlayer.processTimerUpdate(seconds);
+      this.lastSeenSeconds = seconds;
 
-      chrome.storage.local.set({ flowclubSessionStyle: style });
-      console.log('[Flowmate Sync] Style changed to:', style);
-    });
-  });
-
-  // Type button handlers
-  document.querySelectorAll('.flowmate-type-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const type = btn.getAttribute('data-type');
-      sessionState.sessionType = type;
-
-      // Update button styles
-      document.querySelectorAll('.flowmate-type-btn').forEach(b => {
-        b.style.background = 'white';
-        b.style.borderColor = '#ddd';
-        b.style.color = 'black';
-      });
-      btn.style.background = '#5D5FEF';
-      btn.style.borderColor = '#5D5FEF';
-      btn.style.color = 'white';
-
-      updateUI();
-
-      chrome.storage.local.set({ flowclubCurrentSessionType: type });
-      console.log('[Flowmate Sync] Type changed to:', type);
-    });
-  });
-
-  // Block input handler
-  const blockInput = document.getElementById('flowmate-block-input');
-  if (blockInput) {
-    blockInput.addEventListener('change', () => {
-      const value = parseInt(blockInput.value);
-      if (value && value > 0) {
-        sessionState.currentBlock = value;
-        updateUI();
-        chrome.storage.local.set({ flowclubCurrentBlock: value });
-        console.log('[Flowmate Sync] Block changed to:', value);
+      // Clear old cues when timer jumps (new session started)
+      if (this.lastSeenSeconds != null && Math.abs(this.lastSeenSeconds - seconds) > 120) {
+        console.log('[Flow Club Audio] Timer reset detected, clearing cue history');
+        this.audioPlayer.lastPlayedCues.clear();
       }
-    });
-  }
-
-  loadSessionState();
-}
-
-function updateUI() {
-  // Update style buttons
-  document.querySelectorAll('.flowmate-style-btn').forEach(btn => {
-    const style = btn.getAttribute('data-style');
-    if (style === sessionState.sessionStyle) {
-      btn.style.background = '#5D5FEF';
-      btn.style.borderColor = '#5D5FEF';
-      btn.style.color = 'white';
-    } else {
-      btn.style.background = 'white';
-      btn.style.borderColor = '#ddd';
-      btn.style.color = 'black';
     }
-  });
+  }
 
-  // Update type buttons
-  document.querySelectorAll('.flowmate-type-btn').forEach(btn => {
-    const type = btn.getAttribute('data-type');
-    if (type === sessionState.sessionType) {
-      btn.style.background = '#5D5FEF';
-      btn.style.borderColor = '#5D5FEF';
-      btn.style.color = 'white';
-    } else {
-      btn.style.background = 'white';
-      btn.style.borderColor = '#ddd';
-      btn.style.color = 'black';
+  // Separate interval for tick sounds (every second)
+  startTickInterval() {
+    if (this.tickIntervalId) return;
+
+    this.tickIntervalId = setInterval(() => {
+      // Only tick if we have an active timer
+      if (this.lastSeenSeconds !== null && this.lastSeenSeconds > 0) {
+        this.audioPlayer.playTick();
+      }
+    }, 1000);
+  }
+
+  start() {
+    if (this.intervalId != null) return;
+
+    console.log('[Flow Club Audio] Starting audio companion');
+    this.intervalId = setInterval(() => this.poll(), 1000);
+    this.startTickInterval();
+    this.poll(); // Initial poll
+  }
+
+  stop() {
+    if (this.intervalId != null) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
     }
-  });
-
-  // Update block input
-  const blockInput = document.getElementById('flowmate-block-input');
-  if (blockInput && sessionState.currentBlock) {
-    blockInput.value = sessionState.currentBlock;
-  }
-
-  // Update display
-  const displayBlock = document.getElementById('flowmate-display-block');
-  const displayType = document.getElementById('flowmate-display-type');
-
-  if (displayBlock) {
-    displayBlock.textContent = sessionState.currentBlock || '—';
-  }
-
-  if (displayType) {
-    displayType.textContent = sessionState.sessionType || '—';
+    if (this.tickIntervalId != null) {
+      clearInterval(this.tickIntervalId);
+      this.tickIntervalId = null;
+    }
+    console.log('[Flow Club Audio] Stopped');
   }
 }
 
 // ============================================================================
-// Polling & Main Loop
+// Initialization
 // ============================================================================
 
-let intervalId = null;
-let lockedTimerEl = null;
-let lastTimerTextSeen = null;
-let changeCount = 0;
-let lastSeenSeconds = null;
+const companion = new FlowClubAudioCompanion();
 
-function poll() {
-  const { titleText, durationMinutes } = readSessionTitleAndDuration();
-  const candidateEl = lockedTimerEl?.isConnected ? lockedTimerEl : getTimerElement();
-  if (!candidateEl) return;
-  const rawText = (candidateEl.textContent || '').trim();
-  if (!TIME_RE.test(rawText)) return;
-  if (rawText !== lastTimerTextSeen) {
-    changeCount += 1;
-    lastTimerTextSeen = rawText;
-  }
-  if (!lockedTimerEl && changeCount >= 2) lockedTimerEl = candidateEl;
-  const elToUse = lockedTimerEl?.isConnected ? lockedTimerEl : candidateEl;
-  const seconds = parseTimeToSeconds((elToUse.textContent || '').trim());
-  if (seconds == null) return;
+window.addEventListener('beforeunload', () => companion.stop());
+window.addEventListener('pagehide', () => companion.stop());
 
-  // Auto-advance to next block when timer resets to a high value
-  // This detects when we transition from one block to the next
-  if (lastSeenSeconds != null && lastSeenSeconds < 60 && seconds > 300) {
-    // Timer jumped from low (<1min) to high (>5min) = new block started
-    if (sessionState.currentBlock != null) {
-      sessionState.currentBlock += 1;
-
-      // Toggle session type: focus -> break -> focus -> break...
-      sessionState.sessionType = sessionState.sessionType === 'focus' ? 'break' : 'focus';
-
-      chrome.storage.local.set({
-        flowclubCurrentBlock: sessionState.currentBlock,
-        flowclubCurrentSessionType: sessionState.sessionType
-      });
-      console.log('[Flowmate Sync] Auto-advanced to block:', sessionState.currentBlock, 'type:', sessionState.sessionType);
-      updateUI();
-    }
-  }
-  lastSeenSeconds = seconds;
-
-  const phaseLabel = (() => {
-    try {
-      const { titleEl } = readSessionTitleAndDuration();
-      return readNearbyPhaseLabel(titleEl);
-    } catch (e) {
-      return null;
-    }
-  })();
-
-  // Calculate derived values from currentBlock
-  const sessionIndex = sessionState.currentBlock != null ? sessionState.currentBlock - 1 : null;
-  const sessionType = sessionState.sessionType;
-  const completedCount = sessionState.currentBlock != null ? sessionState.currentBlock - 1 : 0;
-
-  writeToStorage({
-    seconds,
-    titleText,
-    durationMinutes,
-    sessionIndex,
-    sessionType,
-    completedCount,
-    phaseLabel,
-    sessionStyle: sessionState.sessionStyle,
-  });
-}
-
-function start() {
-  if (intervalId != null) return;
-  intervalId = setInterval(poll, 1000);
-  poll();
-}
-
-function stop() {
-  if (intervalId != null) {
-    clearInterval(intervalId);
-    intervalId = null;
-  }
-}
-
-window.addEventListener('beforeunload', stop);
-window.addEventListener('pagehide', stop);
-
-// Wait for page to load, then create UI and start polling
+// Wait for page to load, then start
 setTimeout(() => {
-  createUI();
-  start();
+  companion.start();
+  console.log('[Flow Club Audio] Companion initialized and running');
 }, 1000);
