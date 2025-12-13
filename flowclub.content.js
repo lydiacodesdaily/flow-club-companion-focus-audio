@@ -63,6 +63,8 @@ class AudioPlayer {
     };
     this.currentTick = 0; // Alternates between 0 and 1 for tick1/tok1
     this.lastPlayedCues = new Set(); // Prevent duplicate plays
+    this.sessionStartSeconds = null; // Track initial session length
+    this.isCurrentSessionBreak = false; // Cache break status
 
     // Load settings from storage
     this.loadSettings();
@@ -144,11 +146,25 @@ class AudioPlayer {
     }
   }
 
-  // Detect if we're in a break (heuristic: breaks are typically 5, 10, or 15 minutes)
-  isBreakSession(remainingSeconds) {
-    const totalMinutes = Math.ceil(remainingSeconds / 60);
-    // Breaks are typically 5, 10, or 15 minutes at Flow Club
-    return totalMinutes <= 15 && (totalMinutes === 5 || totalMinutes === 10 || totalMinutes === 15);
+  // Detect if we're in a break based on initial session length
+  detectSessionType(currentSeconds) {
+    // If this is a new session (timer jumped up), record the initial length
+    if (this.sessionStartSeconds === null || currentSeconds > this.sessionStartSeconds) {
+      this.sessionStartSeconds = currentSeconds;
+      const initialMinutes = Math.ceil(currentSeconds / 60);
+      // Breaks are typically 5, 10, or 15 minutes at Flow Club
+      this.isCurrentSessionBreak = initialMinutes <= 15 &&
+        (initialMinutes === 5 || initialMinutes === 10 || initialMinutes === 15);
+      console.log(`[Flow Club Audio] New session detected: ${initialMinutes} min, isBreak: ${this.isCurrentSessionBreak}`);
+    }
+    return this.isCurrentSessionBreak;
+  }
+
+  // Reset session tracking
+  resetSession() {
+    this.sessionStartSeconds = null;
+    this.isCurrentSessionBreak = false;
+    this.lastPlayedCues.clear();
   }
 
   // Process timer updates and play appropriate cues
@@ -167,8 +183,8 @@ class AudioPlayer {
 
     this.lastPlayedCues.add(cueKey);
 
-    // Detect if this is likely a break
-    const isBreak = this.isBreakSession(remainingSeconds);
+    // Detect session type (updates isCurrentSessionBreak on new sessions)
+    const isBreak = this.detectSessionType(remainingSeconds);
 
     // Minute announcements: 25, 24, 23, ..., 1 minute
     const minutes = Math.floor(remainingSeconds / 60);
@@ -249,15 +265,15 @@ class FlowClubAudioCompanion {
     const hasChanged = this.lastSeenSeconds === null || this.lastSeenSeconds !== seconds;
 
     if (hasChanged) {
+      // Clear old cues when timer jumps (new session started)
+      if (this.lastSeenSeconds != null && seconds > this.lastSeenSeconds + 10) {
+        console.log('[Flow Club Audio] New session detected, resetting');
+        this.audioPlayer.resetSession();
+      }
+
       // Process voice announcements and special cues
       this.audioPlayer.processTimerUpdate(seconds);
       this.lastSeenSeconds = seconds;
-
-      // Clear old cues when timer jumps (new session started)
-      if (this.lastSeenSeconds != null && Math.abs(this.lastSeenSeconds - seconds) > 120) {
-        console.log('[Flow Club Audio] Timer reset detected, clearing cue history');
-        this.audioPlayer.lastPlayedCues.clear();
-      }
     }
   }
 
@@ -268,8 +284,8 @@ class FlowClubAudioCompanion {
     this.tickIntervalId = setInterval(() => {
       // Only tick if we have an active timer
       if (this.lastSeenSeconds !== null && this.lastSeenSeconds > 0) {
-        const isBreak = this.audioPlayer.isBreakSession(this.lastSeenSeconds);
-        this.audioPlayer.playTick(isBreak);
+        // Use cached break status (updated by detectSessionType)
+        this.audioPlayer.playTick(this.audioPlayer.isCurrentSessionBreak);
       }
     }, 1000);
   }
