@@ -1,16 +1,33 @@
 // popup.js - Settings UI for Flow Club Audio Companion
 
 const DEFAULT_SETTINGS = {
+  muteAll: false,
   tickEnabled: true,
   voiceEnabled: true,
   muteDuringBreaks: false,
-  tickVolume: 0.7,
-  voiceVolume: 0.9
+  tickVolume: 0.3,
+  voiceVolume: 0.85
 };
+
+// Update slider states based on mute
+function updateSliderStates(isMuted) {
+  const tickSlider = document.getElementById('tickVolume');
+  const voiceSlider = document.getElementById('voiceVolume');
+
+  tickSlider.disabled = isMuted;
+  voiceSlider.disabled = isMuted;
+
+  // Visual feedback for disabled state
+  tickSlider.style.opacity = isMuted ? '0.4' : '1';
+  voiceSlider.style.opacity = isMuted ? '0.4' : '1';
+  tickSlider.style.cursor = isMuted ? 'not-allowed' : 'pointer';
+  voiceSlider.style.cursor = isMuted ? 'not-allowed' : 'pointer';
+}
 
 // Load settings and update UI
 function loadSettings() {
   chrome.storage.local.get(DEFAULT_SETTINGS, (settings) => {
+    document.getElementById('muteAll').checked = settings.muteAll;
     document.getElementById('tickEnabled').checked = settings.tickEnabled;
     document.getElementById('voiceEnabled').checked = settings.voiceEnabled;
     document.getElementById('muteDuringBreaks').checked = settings.muteDuringBreaks;
@@ -22,12 +39,15 @@ function loadSettings() {
     document.getElementById('voiceVolume').value = voiceVolume;
     document.getElementById('tickVolumeValue').textContent = tickVolume + '%';
     document.getElementById('voiceVolumeValue').textContent = voiceVolume + '%';
+
+    updateSliderStates(settings.muteAll);
   });
 }
 
 // Save settings
 function saveSettings() {
   const settings = {
+    muteAll: document.getElementById('muteAll').checked,
     tickEnabled: document.getElementById('tickEnabled').checked,
     voiceEnabled: document.getElementById('voiceEnabled').checked,
     muteDuringBreaks: document.getElementById('muteDuringBreaks').checked,
@@ -48,6 +68,12 @@ function saveSettings() {
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   loadSettings();
+
+  // Mute All toggle
+  document.getElementById('muteAll').addEventListener('change', (e) => {
+    updateSliderStates(e.target.checked);
+    saveSettings();
+  });
 
   // Toggle listeners
   document.getElementById('tickEnabled').addEventListener('change', saveSettings);

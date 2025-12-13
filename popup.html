@@ -179,6 +179,13 @@
     <div class="section-title">Audio Features</div>
     <div class="toggle-group">
       <div class="toggle-item">
+        <span class="toggle-label" style="font-weight: 600;">Mute All</span>
+        <label class="switch">
+          <input type="checkbox" id="muteAll">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="toggle-item">
         <span class="toggle-label">Tick sound (every second)</span>
         <label class="switch">
           <input type="checkbox" id="tickEnabled" checked>
@@ -207,21 +214,23 @@
     <div class="volume-control">
       <div class="volume-label">
         <span>Tick volume</span>
-        <span class="volume-value" id="tickVolumeValue">70%</span>
+        <span class="volume-value" id="tickVolumeValue">30%</span>
       </div>
-      <input type="range" id="tickVolume" min="0" max="100" value="70">
+      <input type="range" id="tickVolume" min="0" max="100" value="30">
     </div>
     <div class="volume-control">
       <div class="volume-label">
         <span>Voice volume</span>
-        <span class="volume-value" id="voiceVolumeValue">90%</span>
+        <span class="volume-value" id="voiceVolumeValue">85%</span>
       </div>
-      <input type="range" id="voiceVolume" min="0" max="100" value="90">
+      <input type="range" id="voiceVolume" min="0" max="100" value="85">
     </div>
   </div>
 
   <div class="info">
     Navigate to a Flow Club session at <strong>in.flow.club</strong> to hear audio cues. Tick plays every second, voice announces minutes and seconds remaining.
+    <br><br>
+    Built by <a href="https://flowmate.club" target="_blank" style="color: #5D5FEF; text-decoration: none; font-weight: 600;">Flowmate</a>
   </div>
 
   <div class="status" id="status">Settings saved!</div>

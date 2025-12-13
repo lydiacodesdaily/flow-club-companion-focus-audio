@@ -54,11 +54,12 @@ class AudioPlayer {
   constructor() {
     this.audioCache = new Map();
     this.settings = {
+      muteAll: false,
       tickEnabled: true,
       voiceEnabled: true,
       muteDuringBreaks: false,
-      tickVolume: 0.7,
-      voiceVolume: 0.9
+      tickVolume: 0.3,
+      voiceVolume: 0.85
     };
     this.currentTick = 0; // Alternates between 0 and 1 for tick1/tok1
     this.lastPlayedCues = new Set(); // Prevent duplicate plays
@@ -76,8 +77,9 @@ class AudioPlayer {
 
   loadSettings() {
     chrome.storage.local.get(
-      ['tickEnabled', 'voiceEnabled', 'muteDuringBreaks', 'tickVolume', 'voiceVolume'],
+      ['muteAll', 'tickEnabled', 'voiceEnabled', 'muteDuringBreaks', 'tickVolume', 'voiceVolume'],
       (data) => {
+        if (data.muteAll !== undefined) this.settings.muteAll = data.muteAll;
         if (data.tickEnabled !== undefined) this.settings.tickEnabled = data.tickEnabled;
         if (data.voiceEnabled !== undefined) this.settings.voiceEnabled = data.voiceEnabled;
         if (data.muteDuringBreaks !== undefined) this.settings.muteDuringBreaks = data.muteDuringBreaks;
@@ -99,7 +101,7 @@ class AudioPlayer {
   }
 
   async playTick() {
-    if (!this.settings.tickEnabled) return;
+    if (this.settings.muteAll || !this.settings.tickEnabled) return;
 
     try {
       // Alternate between tick1 and tok1
@@ -116,7 +118,7 @@ class AudioPlayer {
   }
 
   async playVoice(path) {
-    if (!this.settings.voiceEnabled) return;
+    if (this.settings.muteAll || !this.settings.voiceEnabled) return;
 
     try {
       const audio = this.getAudio(path, this.settings.voiceVolume);
@@ -128,7 +130,7 @@ class AudioPlayer {
   }
 
   async playDing() {
-    if (!this.settings.voiceEnabled) return;
+    if (this.settings.muteAll || !this.settings.voiceEnabled) return;
 
     try {
       const audio = this.getAudio('audio/effects/ding.mp3', this.settings.voiceVolume);

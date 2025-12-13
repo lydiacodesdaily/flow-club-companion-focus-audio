@@ -1,4 +1,4 @@
-# Flow Club Companion: Focus Audio (Chrome Extension)
+# Flow Club Focus Audio (Chrome Extension)
 
 A Chrome extension that provides audio cues during **Flow Club** sessions to help you stay focused. Features ticking sounds every second and voice announcements for time remaining.
 
@@ -154,4 +154,4 @@ MIT License - Feel free to use and modify
 
 ## Credits
 
-Built for Flow Club users who want audio feedback during focus sessions.
+Built by [Flowmate](https://flowmate.club) for Flow Club users who want audio feedback during focus sessions.
