@@ -100,8 +100,9 @@ class AudioPlayer {
     return audio;
   }
 
-  async playTick() {
+  async playTick(isBreak = false) {
     if (this.settings.muteAll || !this.settings.tickEnabled) return;
+    if (this.settings.muteDuringBreaks && isBreak) return;
 
     try {
       // Alternate between tick1 and tok1
@@ -117,8 +118,9 @@ class AudioPlayer {
     }
   }
 
-  async playVoice(path) {
+  async playVoice(path, isBreak = false) {
     if (this.settings.muteAll || !this.settings.voiceEnabled) return;
+    if (this.settings.muteDuringBreaks && isBreak) return;
 
     try {
       const audio = this.getAudio(path, this.settings.voiceVolume);
@@ -129,8 +131,9 @@ class AudioPlayer {
     }
   }
 
-  async playDing() {
+  async playDing(isBreak = false) {
     if (this.settings.muteAll || !this.settings.voiceEnabled) return;
+    if (this.settings.muteDuringBreaks && isBreak) return;
 
     try {
       const audio = this.getAudio('audio/effects/ding.mp3', this.settings.voiceVolume);
@@ -139,6 +142,13 @@ class AudioPlayer {
     } catch (err) {
       console.debug('[Flow Club Audio] Ding play failed:', err.message);
     }
+  }
+
+  // Detect if we're in a break (heuristic: breaks are typically 5, 10, or 15 minutes)
+  isBreakSession(remainingSeconds) {
+    const totalMinutes = Math.ceil(remainingSeconds / 60);
+    // Breaks are typically 5, 10, or 15 minutes at Flow Club
+    return totalMinutes <= 15 && (totalMinutes === 5 || totalMinutes === 10 || totalMinutes === 15);
   }
 
   // Process timer updates and play appropriate cues
@@ -157,6 +167,9 @@ class AudioPlayer {
 
     this.lastPlayedCues.add(cueKey);
 
+    // Detect if this is likely a break
+    const isBreak = this.isBreakSession(remainingSeconds);
+
     // Minute announcements: 25, 24, 23, ..., 1 minute
     const minutes = Math.floor(remainingSeconds / 60);
     const seconds = remainingSeconds % 60;
@@ -164,24 +177,25 @@ class AudioPlayer {
     if (seconds === 0 && minutes >= 1 && minutes <= 25) {
       const minuteFile = `audio/minutes/m${String(minutes).padStart(2, '0')}.mp3`;
       console.log(`[Flow Club Audio] Playing ${minutes} minutes`);
-      await this.playVoice(minuteFile);
+      await this.playVoice(minuteFile, isBreak);
       return; // Don't play tick on exact minute announcements
     }
 
     // Ding every 5 minutes for sessions > 25 minutes
     if (seconds === 0 && minutes > 25 && minutes % 5 === 0) {
       console.log(`[Flow Club Audio] Playing ding at ${minutes} minutes`);
-      await this.playDing();
+      await this.playDing(isBreak);
       return;
     }
 
-    // Second announcements: 50, 40, 30, 20, 10, then 9-1
+    // Second announcements: 50, 40, 30, 20, 10 seconds
+    // Need to check both total remainingSeconds AND when in final minute (0:50, 0:40, etc)
     if (remainingSeconds === 50 || remainingSeconds === 40 ||
         remainingSeconds === 30 || remainingSeconds === 20 ||
         remainingSeconds === 10) {
       const secondFile = `audio/seconds/s${remainingSeconds}.mp3`;
       console.log(`[Flow Club Audio] Playing ${remainingSeconds} seconds`);
-      await this.playVoice(secondFile);
+      await this.playVoice(secondFile, isBreak);
       return;
     }
 
@@ -189,7 +203,7 @@ class AudioPlayer {
     if (remainingSeconds >= 1 && remainingSeconds <= 9) {
       const secondFile = `audio/seconds/s${String(remainingSeconds).padStart(2, '0')}.mp3`;
       console.log(`[Flow Club Audio] Playing ${remainingSeconds} seconds`);
-      await this.playVoice(secondFile);
+      await this.playVoice(secondFile, isBreak);
       return;
     }
   }
@@ -254,7 +268,8 @@ class FlowClubAudioCompanion {
     this.tickIntervalId = setInterval(() => {
       // Only tick if we have an active timer
       if (this.lastSeenSeconds !== null && this.lastSeenSeconds > 0) {
-        this.audioPlayer.playTick();
+        const isBreak = this.audioPlayer.isBreakSession(this.lastSeenSeconds);
+        this.audioPlayer.playTick(isBreak);
       }
     }, 1000);
   }
