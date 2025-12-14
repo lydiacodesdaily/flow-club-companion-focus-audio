@@ -152,9 +152,9 @@ class AudioPlayer {
     if (this.sessionStartSeconds === null || currentSeconds > this.sessionStartSeconds) {
       this.sessionStartSeconds = currentSeconds;
       const initialMinutes = Math.ceil(currentSeconds / 60);
-      // Breaks are typically 5, 10, or 15 minutes at Flow Club
-      this.isCurrentSessionBreak = initialMinutes <= 15 &&
-        (initialMinutes === 5 || initialMinutes === 10 || initialMinutes === 15);
+      // Breaks are typically 2, 3, or 5 minutes at Flow Club
+      this.isCurrentSessionBreak = initialMinutes <= 5 &&
+        (initialMinutes === 2 || initialMinutes === 3 || initialMinutes === 5);
     }
     return this.isCurrentSessionBreak;
   }
