@@ -54,7 +54,7 @@ class AudioPlayer {
   constructor() {
     this.audioCache = new Map();
     this.settings = {
-      muteAll: false,
+      audioOn: true,
       tickEnabled: true,
       voiceEnabled: true,
       muteDuringBreaks: false,
@@ -78,17 +78,20 @@ class AudioPlayer {
   }
 
   loadSettings() {
-    chrome.storage.local.get(
-      ['muteAll', 'tickEnabled', 'voiceEnabled', 'muteDuringBreaks', 'tickVolume', 'voiceVolume'],
-      (data) => {
-        if (data.muteAll !== undefined) this.settings.muteAll = data.muteAll;
-        if (data.tickEnabled !== undefined) this.settings.tickEnabled = data.tickEnabled;
-        if (data.voiceEnabled !== undefined) this.settings.voiceEnabled = data.voiceEnabled;
-        if (data.muteDuringBreaks !== undefined) this.settings.muteDuringBreaks = data.muteDuringBreaks;
-        if (data.tickVolume !== undefined) this.settings.tickVolume = data.tickVolume;
-        if (data.voiceVolume !== undefined) this.settings.voiceVolume = data.voiceVolume;
+    chrome.storage.local.get(null, (data) => {
+      // Migrate old muteAll setting to audioOn (inverted logic)
+      if (data.muteAll !== undefined) {
+        this.settings.audioOn = !data.muteAll;
+      } else if (data.audioOn !== undefined) {
+        this.settings.audioOn = data.audioOn;
       }
-    );
+
+      if (data.tickEnabled !== undefined) this.settings.tickEnabled = data.tickEnabled;
+      if (data.voiceEnabled !== undefined) this.settings.voiceEnabled = data.voiceEnabled;
+      if (data.muteDuringBreaks !== undefined) this.settings.muteDuringBreaks = data.muteDuringBreaks;
+      if (data.tickVolume !== undefined) this.settings.tickVolume = data.tickVolume;
+      if (data.voiceVolume !== undefined) this.settings.voiceVolume = data.voiceVolume;
+    });
   }
 
   getAudio(path, volume = 1.0) {
@@ -103,7 +106,7 @@ class AudioPlayer {
   }
 
   async playTick(isBreak = false) {
-    if (this.settings.muteAll || !this.settings.tickEnabled) return;
+    if (!this.settings.audioOn || !this.settings.tickEnabled) return;
     if (this.settings.muteDuringBreaks && isBreak) return;
 
     try {
@@ -121,7 +124,7 @@ class AudioPlayer {
   }
 
   async playVoice(path, isBreak = false) {
-    if (this.settings.muteAll || !this.settings.voiceEnabled) return;
+    if (!this.settings.audioOn || !this.settings.voiceEnabled) return;
     if (this.settings.muteDuringBreaks && isBreak) return;
 
     try {
@@ -134,7 +137,7 @@ class AudioPlayer {
   }
 
   async playDing(isBreak = false) {
-    if (this.settings.muteAll || !this.settings.voiceEnabled) return;
+    if (!this.settings.audioOn || !this.settings.voiceEnabled) return;
     if (this.settings.muteDuringBreaks && isBreak) return;
 
     try {

@@ -170,6 +170,16 @@
     .status.show {
       display: block;
     }
+
+    .toggle-item.disabled {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    .volume-control.disabled {
+      opacity: 0.4;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
@@ -179,27 +189,27 @@
     <div class="section-title">Audio Features</div>
     <div class="toggle-group">
       <div class="toggle-item">
-        <span class="toggle-label" style="font-weight: 600;">Mute All</span>
+        <span class="toggle-label" style="font-weight: 600;">Audio On</span>
         <label class="switch">
-          <input type="checkbox" id="muteAll">
+          <input type="checkbox" id="audioOn" checked>
           <span class="slider"></span>
         </label>
       </div>
-      <div class="toggle-item">
+      <div class="toggle-item controllable-option" id="tickToggle">
         <span class="toggle-label">Tick sound (every second)</span>
         <label class="switch">
           <input type="checkbox" id="tickEnabled" checked>
           <span class="slider"></span>
         </label>
       </div>
-      <div class="toggle-item">
+      <div class="toggle-item controllable-option" id="voiceToggle">
         <span class="toggle-label">Voice announcements</span>
         <label class="switch">
           <input type="checkbox" id="voiceEnabled" checked>
           <span class="slider"></span>
         </label>
       </div>
-      <div class="toggle-item">
+      <div class="toggle-item controllable-option" id="muteDuringBreaksToggle">
         <span class="toggle-label">Mute during breaks</span>
         <label class="switch">
           <input type="checkbox" id="muteDuringBreaks">
@@ -209,16 +219,16 @@
     </div>
   </div>
 
-  <div class="section">
+  <div class="section" id="volumeSection">
     <div class="section-title">Volume Controls</div>
-    <div class="volume-control">
+    <div class="volume-control controllable-option" id="tickVolumeControl">
       <div class="volume-label">
         <span>Tick volume</span>
         <span class="volume-value" id="tickVolumeValue">30%</span>
       </div>
       <input type="range" id="tickVolume" min="0" max="100" value="30">
     </div>
-    <div class="volume-control">
+    <div class="volume-control controllable-option" id="voiceVolumeControl">
       <div class="volume-label">
         <span>Voice volume</span>
         <span class="volume-value" id="voiceVolumeValue">85%</span>
@@ -234,7 +244,7 @@
     <br>
     <a href="https://flowmate.club/" target="_blank" style="color: #5D5FEF; text-decoration: none; font-weight: 600;">Flowmate</a> — a more customizable focus timer
     <br>
-    🍵 <a href="https://buymeacoffee.com/lydiastudio" target="_blank" style="color: #5D5FEF; text-decoration: none; font-weight: 600;">Buy me a matcha</a> (optional)
+    🍵 <a href="https://buymeacoffee.com/lydiastudio" target="_blank" style="color: #5D5FEF; text-decoration: none; font-weight: 600;">Buy me a matcha</a>
   </div>
 
   <div class="status" id="status">Settings saved!</div>

@@ -1,7 +1,7 @@
 // popup.js - Settings UI for Flow Club Audio Companion
 
 const DEFAULT_SETTINGS = {
-  muteAll: false,
+  audioOn: true,
   tickEnabled: true,
   voiceEnabled: true,
   muteDuringBreaks: false,
@@ -9,25 +9,44 @@ const DEFAULT_SETTINGS = {
   voiceVolume: 0.85
 };
 
-// Update slider states based on mute
-function updateSliderStates(isMuted) {
-  const tickSlider = document.getElementById('tickVolume');
-  const voiceSlider = document.getElementById('voiceVolume');
+// Update UI states based on audio on/off
+function updateControlStates(isAudioOn) {
+  const controllableOptions = document.querySelectorAll('.controllable-option');
 
-  tickSlider.disabled = isMuted;
-  voiceSlider.disabled = isMuted;
-
-  // Visual feedback for disabled state
-  tickSlider.style.opacity = isMuted ? '0.4' : '1';
-  voiceSlider.style.opacity = isMuted ? '0.4' : '1';
-  tickSlider.style.cursor = isMuted ? 'not-allowed' : 'pointer';
-  voiceSlider.style.cursor = isMuted ? 'not-allowed' : 'pointer';
+  controllableOptions.forEach(element => {
+    if (isAudioOn) {
+      element.classList.remove('disabled');
+    } else {
+      element.classList.add('disabled');
+    }
+  });
 }
 
 // Load settings and update UI
 function loadSettings() {
-  chrome.storage.local.get(DEFAULT_SETTINGS, (settings) => {
-    document.getElementById('muteAll').checked = settings.muteAll;
+  chrome.storage.local.get(null, (data) => {
+    // Migrate old muteAll setting to audioOn
+    let audioOn = DEFAULT_SETTINGS.audioOn;
+    if (data.muteAll !== undefined) {
+      // Convert old muteAll to new audioOn (inverted logic)
+      audioOn = !data.muteAll;
+      // Remove old setting and save new one
+      chrome.storage.local.remove('muteAll');
+      chrome.storage.local.set({ audioOn: audioOn });
+    } else if (data.audioOn !== undefined) {
+      audioOn = data.audioOn;
+    }
+
+    const settings = {
+      audioOn: audioOn,
+      tickEnabled: data.tickEnabled !== undefined ? data.tickEnabled : DEFAULT_SETTINGS.tickEnabled,
+      voiceEnabled: data.voiceEnabled !== undefined ? data.voiceEnabled : DEFAULT_SETTINGS.voiceEnabled,
+      muteDuringBreaks: data.muteDuringBreaks !== undefined ? data.muteDuringBreaks : DEFAULT_SETTINGS.muteDuringBreaks,
+      tickVolume: data.tickVolume !== undefined ? data.tickVolume : DEFAULT_SETTINGS.tickVolume,
+      voiceVolume: data.voiceVolume !== undefined ? data.voiceVolume : DEFAULT_SETTINGS.voiceVolume
+    };
+
+    document.getElementById('audioOn').checked = settings.audioOn;
     document.getElementById('tickEnabled').checked = settings.tickEnabled;
     document.getElementById('voiceEnabled').checked = settings.voiceEnabled;
     document.getElementById('muteDuringBreaks').checked = settings.muteDuringBreaks;
@@ -40,14 +59,14 @@ function loadSettings() {
     document.getElementById('tickVolumeValue').textContent = tickVolume + '%';
     document.getElementById('voiceVolumeValue').textContent = voiceVolume + '%';
 
-    updateSliderStates(settings.muteAll);
+    updateControlStates(settings.audioOn);
   });
 }
 
 // Save settings
 function saveSettings() {
   const settings = {
-    muteAll: document.getElementById('muteAll').checked,
+    audioOn: document.getElementById('audioOn').checked,
     tickEnabled: document.getElementById('tickEnabled').checked,
     voiceEnabled: document.getElementById('voiceEnabled').checked,
     muteDuringBreaks: document.getElementById('muteDuringBreaks').checked,
@@ -69,9 +88,9 @@ function saveSettings() {
 document.addEventListener('DOMContentLoaded', () => {
   loadSettings();
 
-  // Mute All toggle
-  document.getElementById('muteAll').addEventListener('change', (e) => {
-    updateSliderStates(e.target.checked);
+  // Audio On toggle
+  document.getElementById('audioOn').addEventListener('change', (e) => {
+    updateControlStates(e.target.checked);
     saveSettings();
   });
 
