@@ -152,5 +152,6 @@ MIT License - Feel free to use and modify
 ---
 
 ## Credits
+Built by Liddy 🦥✨ · [Lydia Studio](https://lydiastud.io) for Flow Club users who want audio feedback during focus sessions.
 
-Built by [Flowmate](https://flowmate.club) for Flow Club users who want audio feedback during focus sessions.
+[Flowmate](https://flowmate.club) - a more customizable focus timer

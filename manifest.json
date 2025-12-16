@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Flow Club Companion: Focus Audio",
   "description": "Audio companion for Flow Club with gentle ticking and clear voice minute announcements to support focus and time awareness.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "permissions": ["storage"],
   "host_permissions": [
     "https://in.flow.club/*"
