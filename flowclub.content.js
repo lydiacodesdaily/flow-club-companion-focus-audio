@@ -76,7 +76,8 @@ class AudioPlayer {
       voiceEnabled: true,
       muteDuringBreaks: false,
       tickVolume: 0.3,
-      voiceVolume: 0.85
+      voiceVolume: 0.85,
+      announcementInterval: 1 // minutes
     };
     this.currentTick = 0; // Alternates between 0 and 1 for tick1/tok1
     this.lastPlayedCues = new Set(); // Prevent duplicate plays
@@ -108,6 +109,7 @@ class AudioPlayer {
       if (data.muteDuringBreaks !== undefined) this.settings.muteDuringBreaks = data.muteDuringBreaks;
       if (data.tickVolume !== undefined) this.settings.tickVolume = data.tickVolume;
       if (data.voiceVolume !== undefined) this.settings.voiceVolume = data.voiceVolume;
+      if (data.announcementInterval !== undefined) this.settings.announcementInterval = data.announcementInterval;
     });
   }
 
@@ -208,11 +210,13 @@ class AudioPlayer {
     // Detect session type (updates isCurrentSessionBreak on new sessions)
     const isBreak = this.detectSessionType(remainingSeconds);
 
-    // Minute announcements: 25, 24, 23, ..., 1 minute
+    // Minute announcements: Based on configured interval (e.g., every 1, 2, 3, 5, or 10 minutes)
     const minutes = Math.floor(remainingSeconds / 60);
     const seconds = remainingSeconds % 60;
+    const interval = this.settings.announcementInterval;
 
-    if (seconds === 0 && minutes >= 1 && minutes <= 25) {
+    // Play announcement if we're on an exact minute boundary and it's a multiple of the interval
+    if (seconds === 0 && minutes >= 1 && minutes <= 25 && minutes % interval === 0) {
       const minuteFile = `audio/minutes/m${String(minutes).padStart(2, '0')}.mp3`;
       await this.playVoice(minuteFile, isBreak);
       return; // Don't play tick on exact minute announcements

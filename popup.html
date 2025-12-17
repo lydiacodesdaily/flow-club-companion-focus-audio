@@ -180,6 +180,43 @@
       opacity: 0.4;
       pointer-events: none;
     }
+
+    .interval-control {
+      margin-top: 8px;
+    }
+
+    .interval-control.disabled {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    .interval-label {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 6px;
+    }
+
+    .interval-select {
+      width: 100%;
+      padding: 8px 12px;
+      font-size: 13px;
+      color: #333;
+      background: #f8f9fa;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .interval-select:hover {
+      border-color: #5D5FEF;
+    }
+
+    .interval-select:focus {
+      border-color: #5D5FEF;
+      box-shadow: 0 0 0 2px rgba(93, 95, 239, 0.1);
+    }
   </style>
 </head>
 <body>
@@ -208,6 +245,18 @@
           <input type="checkbox" id="voiceEnabled" checked>
           <span class="slider"></span>
         </label>
+      </div>
+      <div class="interval-control controllable-option" id="intervalControl">
+        <div class="interval-label">
+          <span>Announcement interval</span>
+        </div>
+        <select id="announcementInterval" class="interval-select">
+          <option value="1">Every 1 minute</option>
+          <option value="2">Every 2 minutes</option>
+          <option value="3">Every 3 minutes</option>
+          <option value="5">Every 5 minutes</option>
+          <option value="10">Every 10 minutes</option>
+        </select>
       </div>
       <div class="toggle-item controllable-option" id="muteDuringBreaksToggle">
         <span class="toggle-label">Mute during breaks</span>
