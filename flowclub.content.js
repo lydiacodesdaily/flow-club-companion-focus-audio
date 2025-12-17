@@ -165,7 +165,6 @@ class AudioPlayer {
       await audio.play();
     } catch (err) {
       // Silently fail - might be autoplay restriction
-      console.debug('[Flow Club Audio] Tick play failed:', err.message);
     }
   }
 
@@ -178,7 +177,7 @@ class AudioPlayer {
       audio.currentTime = 0;
       await audio.play();
     } catch (err) {
-      console.debug('[Flow Club Audio] Voice play failed:', err.message);
+      // Silently fail - might be autoplay restriction
     }
   }
 
@@ -191,7 +190,7 @@ class AudioPlayer {
       audio.currentTime = 0;
       await audio.play();
     } catch (err) {
-      console.debug('[Flow Club Audio] Ding play failed:', err.message);
+      // Silently fail - might be autoplay restriction
     }
   }
 
@@ -204,9 +203,6 @@ class AudioPlayer {
       // Breaks are typically 2, 3, or 5 minutes at Flow Club
       this.isCurrentSessionBreak = initialMinutes <= 5 &&
         (initialMinutes === 2 || initialMinutes === 3 || initialMinutes === 5);
-
-      // Log for debugging
-      console.debug(`[Flow Club Audio] New session detected: ${initialMinutes} minutes, isBreak: ${this.isCurrentSessionBreak}`);
     }
     return this.isCurrentSessionBreak;
   }

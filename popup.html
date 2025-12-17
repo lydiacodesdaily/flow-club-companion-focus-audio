@@ -218,48 +218,6 @@
       box-shadow: 0 0 0 2px rgba(93, 95, 239, 0.1);
     }
 
-    /* Tabs */
-    .tabs {
-      display: flex;
-      gap: 4px;
-      margin-bottom: 12px;
-      background: white;
-      border-radius: 8px;
-      padding: 4px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-
-    .tab {
-      flex: 1;
-      padding: 8px 12px;
-      font-size: 13px;
-      font-weight: 500;
-      color: #666;
-      background: transparent;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .tab:hover {
-      background: #f8f9fa;
-      color: #333;
-    }
-
-    .tab.active {
-      background: #5D5FEF;
-      color: white;
-    }
-
-    .tab-content {
-      display: none;
-    }
-
-    .tab-content.active {
-      display: block;
-    }
-
     /* Collapsible Section */
     .collapsible-header {
       display: flex;
@@ -372,14 +330,8 @@
 <body>
   <h1>Flow Club Companion</h1>
 
-  <!-- Tab Navigation -->
-  <div class="tabs">
-    <button class="tab active" data-tab="audio">Audio</button>
-    <button class="tab" data-tab="todo">To-Do</button>
-  </div>
-
-  <!-- Audio Tab -->
-  <div class="tab-content active" id="audio-tab">
+  <!-- Audio Settings -->
+  <div id="audio-settings">
     <div class="section">
       <div class="section-title">Primary Controls</div>
       <div class="toggle-group">
@@ -481,17 +433,6 @@
             <input type="range" id="voiceVolume" min="0" max="100" value="85">
           </div>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- To-Do Tab (Coming Soon) -->
-  <div class="tab-content" id="todo-tab">
-    <div class="section">
-      <div class="section-title">To-Do Lists</div>
-      <div style="padding: 24px; text-align: center; color: #888;">
-        <p style="font-size: 14px; margin-bottom: 8px;">Coming Soon!</p>
-        <p style="font-size: 12px;">Task management features will be available in a future update.</p>
       </div>
     </div>
   </div>

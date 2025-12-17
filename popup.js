@@ -96,33 +96,6 @@ function saveSettings() {
   });
 }
 
-// Tab switching
-function switchTab(tabName) {
-  // Update tab buttons
-  document.querySelectorAll('.tab').forEach(tab => {
-    tab.classList.remove('active');
-  });
-  document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-
-  // Update tab content
-  document.querySelectorAll('.tab-content').forEach(content => {
-    content.classList.remove('active');
-  });
-  document.getElementById(`${tabName}-tab`).classList.add('active');
-
-  // Save active tab preference
-  chrome.storage.local.set({ activeTab: tabName });
-}
-
-// Load active tab preference
-function loadActiveTab() {
-  chrome.storage.local.get('activeTab', (data) => {
-    if (data.activeTab) {
-      switchTab(data.activeTab);
-    }
-  });
-}
-
 // Collapsible section toggle
 function toggleAdvancedSettings() {
   const content = document.getElementById('advancedContent');
@@ -149,15 +122,7 @@ function loadAdvancedState() {
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   loadSettings();
-  loadActiveTab();
   loadAdvancedState();
-
-  // Tab listeners
-  document.querySelectorAll('.tab').forEach(tab => {
-    tab.addEventListener('click', (e) => {
-      switchTab(e.target.dataset.tab);
-    });
-  });
 
   // Collapsible section listener
   document.getElementById('advancedToggle').addEventListener('click', toggleAdvancedSettings);

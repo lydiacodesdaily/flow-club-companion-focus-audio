@@ -2,12 +2,12 @@
 
 A Chrome extension that provides audio cues during **Flow Club** sessions to help you stay focused. Features ticking sounds every second and voice announcements for time remaining.
 
-- **Tick sounds**: Alternates between two tick sounds every second (like a metronome)
+- **Tick sounds**: Choose from multiple ticking styles (tick-tock, tick, beep, ding, or silent)
 - **Voice announcements**:
-  - Minutes: Announces at 25, 24, 23... down to 1 minute remaining
-  - Seconds: Announces at 50, 40, 30, 20, 10 seconds, then counts down 9-1
+  - Minutes: Configurable intervals (every 1, 2, 3, 5, or 10 minutes)
+  - Seconds: Optional countdown at 50, 40, 30, 20, 10 seconds, then 9-1
   - Ding: Every 5 minutes for sessions longer than 25 minutes
-- **Customizable**: Control tick/voice separately, adjust volumes, mute during breaks
+- **Customizable**: Control tick/voice separately, adjust volumes, mute during breaks, collapsible advanced settings
 
 > Note: This is an unofficial tool. Not affiliated with Flow Club.
 
@@ -25,11 +25,16 @@ A Chrome extension that provides audio cues during **Flow Club** sessions to hel
 
 **Settings (via extension popup):**
 
+- Toggle audio on/off globally
 - Toggle tick sounds on/off
 - Toggle voice announcements on/off
+- Choose tick sound style (tick-tock, tick, beep1, beep2, ding, or silent)
+- Toggle seconds countdown (50, 40...1)
+- Set announcement interval (1, 2, 3, 5, or 10 minutes)
 - Adjust tick volume (0-100%)
 - Adjust voice volume (0-100%)
-- Option to mute during breaks (if applicable)
+- Option to mute during breaks
+- Collapsible advanced settings to save space
 
 ---
 
@@ -38,8 +43,8 @@ A Chrome extension that provides audio cues during **Flow Club** sessions to hel
 1. Clone this repo:
 
    ```bash
-   git clone https://github.com/<your-username>/flowmate-flowclub-sync.git
-   cd flowmate-flowclub-sync
+   git clone https://github.com/<your-username>/flow-club-focus-audio.git
+   cd flow-club-focus-audio
    ```
 
 2. Open Chrome and navigate to:
