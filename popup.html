@@ -217,92 +217,212 @@
       border-color: #5D5FEF;
       box-shadow: 0 0 0 2px rgba(93, 95, 239, 0.1);
     }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 12px;
+      background: white;
+      border-radius: 8px;
+      padding: 4px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .tab {
+      flex: 1;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #666;
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab:hover {
+      background: #f8f9fa;
+      color: #333;
+    }
+
+    .tab.active {
+      background: #5D5FEF;
+      color: white;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Collapsible Section */
+    .collapsible-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      padding: 10px 12px;
+      margin: 8px -12px 0 -12px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+
+    .collapsible-header:hover {
+      background: #f0f1f2;
+    }
+
+    .collapsible-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #555;
+    }
+
+    .collapsible-arrow {
+      font-size: 12px;
+      color: #888;
+      transition: transform 0.2s;
+    }
+
+    .collapsible-arrow.expanded {
+      transform: rotate(180deg);
+    }
+
+    .collapsible-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease-out;
+    }
+
+    .collapsible-content.expanded {
+      max-height: 1000px;
+      transition: max-height 0.3s ease-in;
+    }
+
+    .collapsible-content .toggle-group {
+      margin-top: 12px;
+    }
   </style>
 </head>
 <body>
   <h1>Flow Club Companion</h1>
 
-  <div class="section">
-    <div class="section-title">Audio Features</div>
-    <div class="toggle-group">
-      <div class="toggle-item">
-        <span class="toggle-label" style="font-weight: 600;">Audio On</span>
-        <label class="switch">
-          <input type="checkbox" id="audioOn" checked>
-          <span class="slider"></span>
-        </label>
-      </div>
-      <div class="toggle-item controllable-option" id="tickToggle">
-        <span class="toggle-label">Tick sound (every second)</span>
-        <label class="switch">
-          <input type="checkbox" id="tickEnabled" checked>
-          <span class="slider"></span>
-        </label>
-      </div>
-      <div class="interval-control controllable-option" id="tickSoundControl">
-        <div class="interval-label">
-          <span>Tick sound style</span>
+  <!-- Tab Navigation -->
+  <div class="tabs">
+    <button class="tab active" data-tab="audio">Audio</button>
+    <button class="tab" data-tab="todo">To-Do</button>
+  </div>
+
+  <!-- Audio Tab -->
+  <div class="tab-content active" id="audio-tab">
+    <div class="section">
+      <div class="section-title">Primary Controls</div>
+      <div class="toggle-group">
+        <div class="toggle-item">
+          <span class="toggle-label" style="font-weight: 600;">Audio On</span>
+          <label class="switch">
+            <input type="checkbox" id="audioOn" checked>
+            <span class="slider"></span>
+          </label>
         </div>
-        <select id="tickSound" class="interval-select">
-          <option value="tick-tock">Tick-tock (alternating)</option>
-          <option value="tick">Tick</option>
-          <option value="beep1">Beep 1</option>
-          <option value="beep2">Beep 2</option>
-          <option value="ding">Ding</option>
-          <option value="none">None (silent)</option>
-        </select>
-      </div>
-      <div class="toggle-item controllable-option" id="voiceToggle">
-        <span class="toggle-label">Voice announcements</span>
-        <label class="switch">
-          <input type="checkbox" id="voiceEnabled" checked>
-          <span class="slider"></span>
-        </label>
-      </div>
-      <div class="toggle-item controllable-option" id="secondsCountdownToggle">
-        <span class="toggle-label">Seconds countdown (50, 40...1)</span>
-        <label class="switch">
-          <input type="checkbox" id="secondsCountdownEnabled" checked>
-          <span class="slider"></span>
-        </label>
-      </div>
-      <div class="interval-control controllable-option" id="intervalControl">
-        <div class="interval-label">
-          <span>Announcement interval</span>
+        <div class="toggle-item controllable-option" id="tickToggle">
+          <span class="toggle-label">Tick sound (every second)</span>
+          <label class="switch">
+            <input type="checkbox" id="tickEnabled" checked>
+            <span class="slider"></span>
+          </label>
         </div>
-        <select id="announcementInterval" class="interval-select">
-          <option value="1">Every 1 minute</option>
-          <option value="2">Every 2 minutes</option>
-          <option value="3">Every 3 minutes</option>
-          <option value="5">Every 5 minutes</option>
-          <option value="10">Every 10 minutes</option>
-        </select>
+        <div class="toggle-item controllable-option" id="voiceToggle">
+          <span class="toggle-label">Voice announcements</span>
+          <label class="switch">
+            <input type="checkbox" id="voiceEnabled" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
       </div>
-      <div class="toggle-item controllable-option" id="muteDuringBreaksToggle">
-        <span class="toggle-label">Mute during breaks</span>
-        <label class="switch">
-          <input type="checkbox" id="muteDuringBreaks">
-          <span class="slider"></span>
-        </label>
+
+      <!-- Collapsible Advanced Settings -->
+      <div class="collapsible-header" id="advancedToggle">
+        <span class="collapsible-title">Advanced Settings</span>
+        <span class="collapsible-arrow">▼</span>
+      </div>
+      <div class="collapsible-content" id="advancedContent">
+        <div class="toggle-group">
+          <div class="interval-control controllable-option" id="tickSoundControl">
+            <div class="interval-label">
+              <span>Tick sound style</span>
+            </div>
+            <select id="tickSound" class="interval-select">
+              <option value="tick-tock">Tick-tock (alternating)</option>
+              <option value="tick">Tick</option>
+              <option value="beep1">Beep 1</option>
+              <option value="beep2">Beep 2</option>
+              <option value="ding">Ding</option>
+              <option value="none">None (silent)</option>
+            </select>
+          </div>
+          <div class="toggle-item controllable-option" id="secondsCountdownToggle">
+            <span class="toggle-label">Seconds countdown (50, 40...1)</span>
+            <label class="switch">
+              <input type="checkbox" id="secondsCountdownEnabled" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="interval-control controllable-option" id="intervalControl">
+            <div class="interval-label">
+              <span>Announcement interval</span>
+            </div>
+            <select id="announcementInterval" class="interval-select">
+              <option value="1">Every 1 minute</option>
+              <option value="2">Every 2 minutes</option>
+              <option value="3">Every 3 minutes</option>
+              <option value="5">Every 5 minutes</option>
+              <option value="10">Every 10 minutes</option>
+            </select>
+          </div>
+          <div class="toggle-item controllable-option" id="muteDuringBreaksToggle">
+            <span class="toggle-label">Mute during breaks</span>
+            <label class="switch">
+              <input type="checkbox" id="muteDuringBreaks">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Volume Controls in Advanced -->
+        <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #e0e0e0;">
+          <div class="volume-control controllable-option" id="tickVolumeControl">
+            <div class="volume-label">
+              <span>Tick volume</span>
+              <span class="volume-value" id="tickVolumeValue">30%</span>
+            </div>
+            <input type="range" id="tickVolume" min="0" max="100" value="30">
+          </div>
+          <div class="volume-control controllable-option" id="voiceVolumeControl">
+            <div class="volume-label">
+              <span>Voice volume</span>
+              <span class="volume-value" id="voiceVolumeValue">85%</span>
+            </div>
+            <input type="range" id="voiceVolume" min="0" max="100" value="85">
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
-  <div class="section" id="volumeSection">
-    <div class="section-title">Volume Controls</div>
-    <div class="volume-control controllable-option" id="tickVolumeControl">
-      <div class="volume-label">
-        <span>Tick volume</span>
-        <span class="volume-value" id="tickVolumeValue">30%</span>
+  <!-- To-Do Tab (Coming Soon) -->
+  <div class="tab-content" id="todo-tab">
+    <div class="section">
+      <div class="section-title">To-Do Lists</div>
+      <div style="padding: 24px; text-align: center; color: #888;">
+        <p style="font-size: 14px; margin-bottom: 8px;">Coming Soon!</p>
+        <p style="font-size: 12px;">Task management features will be available in a future update.</p>
       </div>
-      <input type="range" id="tickVolume" min="0" max="100" value="30">
-    </div>
-    <div class="volume-control controllable-option" id="voiceVolumeControl">
-      <div class="volume-label">
-        <span>Voice volume</span>
-        <span class="volume-value" id="voiceVolumeValue">85%</span>
-      </div>
-      <input type="range" id="voiceVolume" min="0" max="100" value="85">
     </div>
   </div>
 
