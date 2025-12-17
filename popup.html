@@ -307,6 +307,66 @@
     .collapsible-content .toggle-group {
       margin-top: 12px;
     }
+
+    /* Tooltip */
+    .info-icon {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      line-height: 14px;
+      text-align: center;
+      border-radius: 50%;
+      background: #d0d0d0;
+      color: white;
+      font-size: 10px;
+      font-weight: bold;
+      margin-left: 6px;
+      cursor: help;
+      position: relative;
+    }
+
+    .info-icon:hover {
+      background: #5D5FEF;
+    }
+
+    .tooltip {
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      margin-bottom: 8px;
+      padding: 10px 12px;
+      background: #2c2c2c;
+      color: white;
+      font-size: 11px;
+      line-height: 1.5;
+      border-radius: 6px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+      z-index: 1000;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .tooltip::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-top-color: #2c2c2c;
+    }
+
+    .info-icon:hover .tooltip {
+      opacity: 1;
+    }
+
+    .toggle-label-with-info {
+      display: flex;
+      align-items: center;
+    }
   </style>
 </head>
 <body>
@@ -338,7 +398,17 @@
           </label>
         </div>
         <div class="toggle-item controllable-option" id="voiceToggle">
-          <span class="toggle-label">Voice announcements</span>
+          <span class="toggle-label toggle-label-with-info">
+            Voice announcements
+            <span class="info-icon">i
+              <span class="tooltip">
+                Voice announcements play:<br>
+                • Every 5 min for sessions ≥25 min<br>
+                • Every 1 min in the final stretch<br>
+                • Countdown: 50, 40, 30, 20, 10, 9...1 sec
+              </span>
+            </span>
+          </span>
           <label class="switch">
             <input type="checkbox" id="voiceEnabled" checked>
             <span class="slider"></span>
