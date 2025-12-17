@@ -26,6 +26,23 @@ function isVisible(el) {
   return r.width > 0 && r.height > 0;
 }
 
+function isInLounge() {
+  // Check if we're in the lounge waiting area (before session starts)
+  // The lounge has an "Enter Session" button that disappears once the session starts
+  const root = document.getElementById('root') || document.body;
+  const buttons = root.querySelectorAll('button');
+
+  for (const btn of buttons) {
+    const text = (btn.textContent || '').trim();
+    // Check for "Enter Session" or similar text that only appears in lounge
+    if (isVisible(btn) && text === 'Enter Session') {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 function getTimerElement() {
   const root = document.getElementById('root') || document.body;
   const candidates = Array.from(root.querySelectorAll('div, span')).filter(
@@ -151,13 +168,16 @@ class AudioPlayer {
 
   // Detect if we're in a break based on initial session length
   detectSessionType(currentSeconds) {
-    // If this is a new session (timer jumped up), record the initial length
+    // If this is a new session (timer jumped up or first time), record the initial length
     if (this.sessionStartSeconds === null || currentSeconds > this.sessionStartSeconds) {
       this.sessionStartSeconds = currentSeconds;
       const initialMinutes = Math.ceil(currentSeconds / 60);
       // Breaks are typically 2, 3, or 5 minutes at Flow Club
       this.isCurrentSessionBreak = initialMinutes <= 5 &&
         (initialMinutes === 2 || initialMinutes === 3 || initialMinutes === 5);
+
+      // Log for debugging
+      console.debug(`[Flow Club Audio] New session detected: ${initialMinutes} minutes, isBreak: ${this.isCurrentSessionBreak}`);
     }
     return this.isCurrentSessionBreak;
   }
@@ -238,6 +258,16 @@ class FlowClubAudioCompanion {
   }
 
   poll() {
+    // Skip audio if we're in the lounge (waiting for session to start)
+    if (isInLounge()) {
+      // Reset session tracking when in lounge
+      if (this.lastSeenSeconds !== null) {
+        this.lastSeenSeconds = null;
+        this.audioPlayer.resetSession();
+      }
+      return;
+    }
+
     const candidateEl = this.lockedTimerEl?.isConnected ? this.lockedTimerEl : getTimerElement();
     if (!candidateEl) return;
 
