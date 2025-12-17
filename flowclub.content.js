@@ -74,12 +74,14 @@ class AudioPlayer {
       audioOn: true,
       tickEnabled: true,
       voiceEnabled: true,
+      secondsCountdownEnabled: true,
       muteDuringBreaks: false,
       tickVolume: 0.3,
       voiceVolume: 0.85,
-      announcementInterval: 1 // minutes
+      announcementInterval: 1, // minutes
+      tickSound: 'tick-tock' // tick-tock, tick, beep1, beep2, ding, none
     };
-    this.currentTick = 0; // Alternates between 0 and 1 for tick1/tok1
+    this.currentTick = 0; // Alternates between 0 and 1 for tick1/tok1 (used for tick-tock mode)
     this.lastPlayedCues = new Set(); // Prevent duplicate plays
     this.sessionStartSeconds = null; // Track initial session length
     this.isCurrentSessionBreak = false; // Cache break status
@@ -106,10 +108,12 @@ class AudioPlayer {
 
       if (data.tickEnabled !== undefined) this.settings.tickEnabled = data.tickEnabled;
       if (data.voiceEnabled !== undefined) this.settings.voiceEnabled = data.voiceEnabled;
+      if (data.secondsCountdownEnabled !== undefined) this.settings.secondsCountdownEnabled = data.secondsCountdownEnabled;
       if (data.muteDuringBreaks !== undefined) this.settings.muteDuringBreaks = data.muteDuringBreaks;
       if (data.tickVolume !== undefined) this.settings.tickVolume = data.tickVolume;
       if (data.voiceVolume !== undefined) this.settings.voiceVolume = data.voiceVolume;
       if (data.announcementInterval !== undefined) this.settings.announcementInterval = data.announcementInterval;
+      if (data.tickSound !== undefined) this.settings.tickSound = data.tickSound;
     });
   }
 
@@ -127,11 +131,34 @@ class AudioPlayer {
   async playTick(isBreak = false) {
     if (!this.settings.audioOn || !this.settings.tickEnabled) return;
     if (this.settings.muteDuringBreaks && isBreak) return;
+    if (this.settings.tickSound === 'none') return; // Silent mode
 
     try {
-      // Alternate between tick1 and tok1
-      const tickFile = this.currentTick === 0 ? 'audio/effects/tick1.mp3' : 'audio/effects/tok1.mp3';
-      this.currentTick = 1 - this.currentTick;
+      let tickFile;
+
+      switch (this.settings.tickSound) {
+        case 'tick-tock':
+          // Alternate between tick1 and tok1
+          tickFile = this.currentTick === 0 ? 'audio/effects/tick1.mp3' : 'audio/effects/tok1.mp3';
+          this.currentTick = 1 - this.currentTick;
+          break;
+        case 'tick':
+          tickFile = 'audio/effects/tick.m4a';
+          break;
+        case 'beep1':
+          tickFile = 'audio/effects/beep1.mp3';
+          break;
+        case 'beep2':
+          tickFile = 'audio/effects/beep2.mp3';
+          break;
+        case 'ding':
+          tickFile = 'audio/effects/ding.mp3';
+          break;
+        default:
+          // Default to tick-tock
+          tickFile = this.currentTick === 0 ? 'audio/effects/tick1.mp3' : 'audio/effects/tok1.mp3';
+          this.currentTick = 1 - this.currentTick;
+      }
 
       const audio = this.getAudio(tickFile, this.settings.tickVolume);
       audio.currentTime = 0; // Reset to start
@@ -228,20 +255,22 @@ class AudioPlayer {
       return;
     }
 
-    // Second announcements: 50, 40, 30, 20, 10 seconds
-    if (remainingSeconds === 50 || remainingSeconds === 40 ||
-        remainingSeconds === 30 || remainingSeconds === 20 ||
-        remainingSeconds === 10) {
-      const secondFile = `audio/seconds/s${remainingSeconds}.mp3`;
-      await this.playVoice(secondFile, isBreak);
-      return;
-    }
+    // Second announcements: 50, 40, 30, 20, 10 seconds (only if enabled)
+    if (this.settings.secondsCountdownEnabled) {
+      if (remainingSeconds === 50 || remainingSeconds === 40 ||
+          remainingSeconds === 30 || remainingSeconds === 20 ||
+          remainingSeconds === 10) {
+        const secondFile = `audio/seconds/s${remainingSeconds}.mp3`;
+        await this.playVoice(secondFile, isBreak);
+        return;
+      }
 
-    // Final countdown: 9, 8, 7, ..., 1
-    if (remainingSeconds >= 1 && remainingSeconds <= 9) {
-      const secondFile = `audio/seconds/s${String(remainingSeconds).padStart(2, '0')}.mp3`;
-      await this.playVoice(secondFile, isBreak);
-      return;
+      // Final countdown: 9, 8, 7, ..., 1 (only if enabled)
+      if (remainingSeconds >= 1 && remainingSeconds <= 9) {
+        const secondFile = `audio/seconds/s${String(remainingSeconds).padStart(2, '0')}.mp3`;
+        await this.playVoice(secondFile, isBreak);
+        return;
+      }
     }
   }
 }

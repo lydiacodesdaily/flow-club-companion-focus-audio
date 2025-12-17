@@ -239,10 +239,30 @@
           <span class="slider"></span>
         </label>
       </div>
+      <div class="interval-control controllable-option" id="tickSoundControl">
+        <div class="interval-label">
+          <span>Tick sound style</span>
+        </div>
+        <select id="tickSound" class="interval-select">
+          <option value="tick-tock">Tick-tock (alternating)</option>
+          <option value="tick">Tick</option>
+          <option value="beep1">Beep 1</option>
+          <option value="beep2">Beep 2</option>
+          <option value="ding">Ding</option>
+          <option value="none">None (silent)</option>
+        </select>
+      </div>
       <div class="toggle-item controllable-option" id="voiceToggle">
         <span class="toggle-label">Voice announcements</span>
         <label class="switch">
           <input type="checkbox" id="voiceEnabled" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="toggle-item controllable-option" id="secondsCountdownToggle">
+        <span class="toggle-label">Seconds countdown (50, 40...1)</span>
+        <label class="switch">
+          <input type="checkbox" id="secondsCountdownEnabled" checked>
           <span class="slider"></span>
         </label>
       </div>

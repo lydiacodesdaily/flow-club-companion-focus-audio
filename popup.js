@@ -4,10 +4,12 @@ const DEFAULT_SETTINGS = {
   audioOn: true,
   tickEnabled: true,
   voiceEnabled: true,
+  secondsCountdownEnabled: true,
   muteDuringBreaks: false,
   tickVolume: 0.3,
   voiceVolume: 0.85,
-  announcementInterval: 1 // minutes
+  announcementInterval: 1, // minutes
+  tickSound: 'tick-tock' // tick-tock, tick, beep1, beep2, ding, none
 };
 
 // Update UI states based on audio on/off
@@ -42,17 +44,21 @@ function loadSettings() {
       audioOn: audioOn,
       tickEnabled: data.tickEnabled !== undefined ? data.tickEnabled : DEFAULT_SETTINGS.tickEnabled,
       voiceEnabled: data.voiceEnabled !== undefined ? data.voiceEnabled : DEFAULT_SETTINGS.voiceEnabled,
+      secondsCountdownEnabled: data.secondsCountdownEnabled !== undefined ? data.secondsCountdownEnabled : DEFAULT_SETTINGS.secondsCountdownEnabled,
       muteDuringBreaks: data.muteDuringBreaks !== undefined ? data.muteDuringBreaks : DEFAULT_SETTINGS.muteDuringBreaks,
       tickVolume: data.tickVolume !== undefined ? data.tickVolume : DEFAULT_SETTINGS.tickVolume,
       voiceVolume: data.voiceVolume !== undefined ? data.voiceVolume : DEFAULT_SETTINGS.voiceVolume,
-      announcementInterval: data.announcementInterval !== undefined ? data.announcementInterval : DEFAULT_SETTINGS.announcementInterval
+      announcementInterval: data.announcementInterval !== undefined ? data.announcementInterval : DEFAULT_SETTINGS.announcementInterval,
+      tickSound: data.tickSound !== undefined ? data.tickSound : DEFAULT_SETTINGS.tickSound
     };
 
     document.getElementById('audioOn').checked = settings.audioOn;
     document.getElementById('tickEnabled').checked = settings.tickEnabled;
     document.getElementById('voiceEnabled').checked = settings.voiceEnabled;
+    document.getElementById('secondsCountdownEnabled').checked = settings.secondsCountdownEnabled;
     document.getElementById('muteDuringBreaks').checked = settings.muteDuringBreaks;
     document.getElementById('announcementInterval').value = settings.announcementInterval;
+    document.getElementById('tickSound').value = settings.tickSound;
 
     const tickVolume = Math.round(settings.tickVolume * 100);
     const voiceVolume = Math.round(settings.voiceVolume * 100);
@@ -72,10 +78,12 @@ function saveSettings() {
     audioOn: document.getElementById('audioOn').checked,
     tickEnabled: document.getElementById('tickEnabled').checked,
     voiceEnabled: document.getElementById('voiceEnabled').checked,
+    secondsCountdownEnabled: document.getElementById('secondsCountdownEnabled').checked,
     muteDuringBreaks: document.getElementById('muteDuringBreaks').checked,
     tickVolume: parseInt(document.getElementById('tickVolume').value) / 100,
     voiceVolume: parseInt(document.getElementById('voiceVolume').value) / 100,
-    announcementInterval: parseInt(document.getElementById('announcementInterval').value)
+    announcementInterval: parseInt(document.getElementById('announcementInterval').value),
+    tickSound: document.getElementById('tickSound').value
   };
 
   chrome.storage.local.set(settings, () => {
@@ -101,10 +109,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // Toggle listeners
   document.getElementById('tickEnabled').addEventListener('change', saveSettings);
   document.getElementById('voiceEnabled').addEventListener('change', saveSettings);
+  document.getElementById('secondsCountdownEnabled').addEventListener('change', saveSettings);
   document.getElementById('muteDuringBreaks').addEventListener('change', saveSettings);
 
-  // Announcement interval listener
+  // Dropdown listeners
   document.getElementById('announcementInterval').addEventListener('change', saveSettings);
+  document.getElementById('tickSound').addEventListener('change', saveSettings);
 
   // Volume slider listeners
   const tickVolumeSlider = document.getElementById('tickVolume');
