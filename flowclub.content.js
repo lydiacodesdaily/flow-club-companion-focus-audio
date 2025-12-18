@@ -137,11 +137,15 @@ class AudioPlayer {
     });
   }
 
-  getAudio(path, volume = 1.0) {
-    if (!this.audioCache.has(path)) {
+  getAudio(path, volume = 1.0, forceNew = false) {
+    // For voice files, create fresh Audio objects to prevent stale state after hours of use
+    if (forceNew || !this.audioCache.has(path)) {
       const audio = new Audio(chrome.runtime.getURL(path));
       audio.volume = volume;
-      this.audioCache.set(path, audio);
+      if (!forceNew) {
+        this.audioCache.set(path, audio);
+      }
+      return audio;
     }
     const audio = this.audioCache.get(path);
     audio.volume = volume;
@@ -193,7 +197,8 @@ class AudioPlayer {
     if (this.settings.muteDuringBreaks && isBreak) return;
 
     try {
-      const audio = this.getAudio(path, this.settings.voiceVolume);
+      // Create a fresh Audio object for voice announcements to prevent stale state
+      const audio = this.getAudio(path, this.settings.voiceVolume, true);
       audio.currentTime = 0;
       await audio.play();
     } catch (err) {
@@ -206,7 +211,8 @@ class AudioPlayer {
     if (this.settings.muteDuringBreaks && isBreak) return;
 
     try {
-      const audio = this.getAudio('audio/effects/ding.mp3', this.settings.voiceVolume);
+      // Create a fresh Audio object for ding to prevent stale state
+      const audio = this.getAudio('audio/effects/ding.mp3', this.settings.voiceVolume, true);
       audio.currentTime = 0;
       await audio.play();
     } catch (err) {
