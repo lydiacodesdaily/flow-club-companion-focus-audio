@@ -543,6 +543,10 @@
       outline: none;
       transition: border-color 0.2s, background 0.2s;
       margin-bottom: 10px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      resize: vertical;
+      min-height: 36px;
+      line-height: 1.5;
     }
 
     .add-task-input:focus {
@@ -794,13 +798,13 @@
         </div>
       </div>
 
-      <input
-        type="text"
+      <textarea
         id="addTaskInput"
         class="add-task-input"
         placeholder="Add a task and press Enter…"
+        rows="1"
         style="display: none;"
-      />
+      ></textarea>
 
       <button class="new-list-btn" id="newListBtn">
         <span>+</span> New task list

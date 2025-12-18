@@ -454,10 +454,39 @@ document.addEventListener('DOMContentLoaded', () => {
     taskManager.render();
   });
 
-  document.getElementById('addTaskInput').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter' && e.target.value.trim()) {
-      taskManager.addTask(taskManager.currentListId, e.target.value.trim());
+  const addTaskInput = document.getElementById('addTaskInput');
+
+  // Auto-resize textarea
+  addTaskInput.addEventListener('input', (e) => {
+    e.target.style.height = 'auto';
+    e.target.style.height = Math.max(36, e.target.scrollHeight) + 'px';
+  });
+
+  addTaskInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault(); // Prevent new line on Enter
+
+      const input = e.target.value.trim();
+      if (!input) return;
+
+      // Check if input contains markdown checklist format (newlines with "- [ ]" or "- [x]")
+      if (input.includes('\n') && /^-\s*\[[\sx]\]/m.test(input)) {
+        // Parse markdown checklist format
+        const lines = input.split('\n');
+        lines.forEach(line => {
+          // Match patterns like "- [ ] task" or "- [x] task" or "- task"
+          const match = line.trim().match(/^-\s*(?:\[[\sx]\]\s*)?(.+)$/);
+          if (match && match[1].trim()) {
+            taskManager.addTask(taskManager.currentListId, match[1].trim());
+          }
+        });
+      } else {
+        // Single task
+        taskManager.addTask(taskManager.currentListId, input);
+      }
+
       e.target.value = '';
+      e.target.style.height = 'auto';
     }
   });
 
