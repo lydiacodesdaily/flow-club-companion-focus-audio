@@ -43,6 +43,26 @@ function isInLounge() {
   return false;
 }
 
+function isInPreWorkPhase() {
+  // Check if we're in the pre-work phase (check-in, introductions, etc.)
+  // This phase occurs after entering the session but before the first work session starts
+  // Look for indicators that we're still in setup/check-in rather than an actual session
+  const root = document.getElementById('root') || document.body;
+  const textContent = root.textContent || '';
+
+  // Check for common pre-work phase text patterns
+  // These patterns indicate we're in check-in or intro phase, not a break
+  const preWorkIndicators = [
+    'Starting in',
+    'Get ready',
+    'Starting soon'
+  ];
+
+  return preWorkIndicators.some(indicator =>
+    textContent.toLowerCase().includes(indicator.toLowerCase())
+  );
+}
+
 function getTimerElement() {
   const root = document.getElementById('root') || document.body;
   const candidates = Array.from(root.querySelectorAll('div, span')).filter(
@@ -200,9 +220,16 @@ class AudioPlayer {
     if (this.sessionStartSeconds === null || currentSeconds > this.sessionStartSeconds) {
       this.sessionStartSeconds = currentSeconds;
       const initialMinutes = Math.ceil(currentSeconds / 60);
-      // Breaks are typically 2, 3, or 5 minutes at Flow Club
-      this.isCurrentSessionBreak = initialMinutes <= 5 &&
-        (initialMinutes === 2 || initialMinutes === 3 || initialMinutes === 5);
+
+      // Check if we're in a pre-work phase (check-in, intro, etc.)
+      // If so, this is NOT a break, even if the timer is 2-5 minutes
+      if (isInPreWorkPhase()) {
+        this.isCurrentSessionBreak = false;
+      } else {
+        // Breaks are typically 2, 3, or 5 minutes at Flow Club
+        this.isCurrentSessionBreak = initialMinutes <= 5 &&
+          (initialMinutes === 2 || initialMinutes === 3 || initialMinutes === 5);
+      }
     }
     return this.isCurrentSessionBreak;
   }
