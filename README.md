@@ -1,130 +1,138 @@
-# Flow Club Focus Audio (Chrome Extension)
+# Flow Club Companion (Chrome Extension)
 
-A Chrome extension that provides audio cues during **Flow Club** sessions to help you stay focused. Features ticking sounds every second and voice announcements for time remaining.
+A gentle Chrome extension that adds **focus-supporting tools** to **Flow Club** sessions — including customizable audio cues and lightweight task lists to help you stay oriented and focused during sessions.
 
-- **Tick sounds**: Choose from multiple ticking styles (tick-tock, tick, beep, ding, or silent)
+> Note: This is an unofficial tool and is not affiliated with Flow Club.
+
+---
+
+## Features
+
+### 🎧 Focus Audio
+Customizable audio cues that sync with Flow Club session timers.
+
+- **Tick sounds**: Choose from multiple styles (tick-tock, tick, beep, ding, or silent)
 - **Voice announcements**:
   - Minutes: Configurable intervals (every 1, 2, 3, 5, or 10 minutes)
-  - Seconds: Optional countdown at 50, 40, 30, 20, 10 seconds, then 9-1
+  - Seconds: Optional countdown at 50, 40, 30, 20, 10 seconds, then 9–1
   - Ding: Every 5 minutes for sessions longer than 25 minutes
-- **Customizable**: Control tick/voice separately, adjust volumes, mute during breaks, collapsible advanced settings
+- **Fully customizable**:
+  - Enable/disable tick and voice independently
+  - Adjust tick and voice volume
+  - Mute audio during breaks
+  - Collapsible advanced settings to reduce clutter
 
-> Note: This is an unofficial tool. Not affiliated with Flow Club.
+---
+
+### ✅ Tasks (Session Companion)
+A calm, reusable task list designed specifically for Flow Club sessions.
+
+- Create **multiple task lists** (e.g. Morning Routine, Study, Admin)
+- Reuse lists across sessions
+- Add, check off, or remove tasks
+- **One-click “Copy for Flow Club”** to paste tasks directly into the Flow Club *My Goals* section
+- Tasks are stored **locally in the extension** — nothing is shared unless you copy it
+
+This is intentionally lightweight and flexible — not a full task manager.
 
 ---
 
 ## How it works
 
-**On Flow Club session pages (`https://in.flow.club/*`):**
+### On Flow Club pages (`https://in.flow.club/*`)
+- The extension detects the active session timer
+- Audio cues play locally in your browser, synced to the countdown
+- The Tasks tab is available anytime during a session
 
-- The extension automatically detects the countdown timer on the page
-- Plays audio cues locally in your browser:
-  - Tick sound every second (alternating tick1/tok1)
-  - Voice announcements at key time markers
-- All audio playback is local - no external dependencies required
+### Extension popup
+The popup acts as a **session companion**, with tabs for:
+- **Session** – timer-aware audio controls
+- **Tasks** – reusable task lists for focus sessions
+- **Settings** – audio preferences and advanced options
 
-**Settings (via extension popup):**
-
-- Toggle audio on/off globally
-- Toggle tick sounds on/off
-- Toggle voice announcements on/off
-- Choose tick sound style (tick-tock, tick, beep1, beep2, ding, or silent)
-- Toggle seconds countdown (50, 40...1)
-- Set announcement interval (1, 2, 3, 5, or 10 minutes)
-- Adjust tick volume (0-100%)
-- Adjust voice volume (0-100%)
-- Option to mute during breaks
-- Collapsible advanced settings to save space
+All functionality runs locally in your browser.
 
 ---
 
 ## Installation (Unpacked Extension)
 
-1. Clone this repo:
+1. Clone this repository:
 
    ```bash
-   git clone https://github.com/<your-username>/flow-club-focus-audio.git
-   cd flow-club-focus-audio
+   git clone https://github.com/<your-username>/flow-club-companion.git
+   cd flow-club-companion
    ```
 
-2. Open Chrome and navigate to:
+2.	Open Chrome and navigate to: chrome://extensions/
 
-   ```
-   chrome://extensions/
-   ```
-
-3. Enable **Developer mode** (toggle in top-right corner)
+3. Enable **Developer mode** (top-right)
 
 4. Click **Load unpacked**
 
 5. Select this repository folder
 
-6. The extension is now active!
+The extension is now active.
 
 ---
 
 ## Usage
 
-1. Navigate to a Flow Club session at [https://in.flow.club](https://in.flow.club)
+1. Navigate to a Flow Club session at  
+   https://in.flow.club
 
 2. Join or start a session
 
-3. The extension will automatically detect the timer and begin playing audio cues
+3. Audio cues will automatically sync with the session timer
 
-4. Click the extension icon in your toolbar to adjust settings:
-   - Enable/disable tick sounds
-   - Enable/disable voice announcements
-   - Adjust volume levels
+4. Click the extension icon to:
+   - Adjust audio settings
+   - Switch to the **Tasks** tab
+   - Create or reuse task lists
+   - Copy tasks into Flow Club’s *My Goals* section
 
 ---
 
 ## Audio Files
 
-All audio files are included in the `/audio/` directory:
+All audio assets are bundled with the extension:
 
-- `/audio/effects/` - tick1.mp3, tok1.mp3, ding.mp3
-- `/audio/minutes/` - m01.mp3 through m25.mp3
-- `/audio/seconds/` - s01.mp3 through s09.mp3, s10.mp3, s20.mp3, s30.mp3, s40.mp3, s50.mp3
+- `/audio/effects/` — tick1.mp3, tok1.mp3, ding.mp3
+- `/audio/minutes/` — m01.mp3 through m25.mp3
+- `/audio/seconds/` — s01–s09, s10, s20, s30, s40, s50
+
+No external audio dependencies are used.
 
 ---
 
 ## Technical Details
 
-**Files:**
+### Key files
 
-- `manifest.json` - Extension configuration
-- `flowclub.content.js` - Content script that runs on Flow Club pages
-  - Detects timer element using DOM selectors
-  - Parses time remaining (MM:SS or HH:MM:SS format)
-  - Manages audio playback with caching
-  - Prevents duplicate announcements
-- `popup.html` / `popup.js` - Settings UI
-- `audio/` - All audio files (mp3/m4a)
+- `manifest.json` — Extension configuration
+- `flowclub.content.js`
+  - Detects the Flow Club timer via DOM selectors
+  - Parses remaining time (MM:SS or HH:MM:SS)
+  - Manages audio playback and prevents duplicate announcements
+- `popup.html` / `popup.js`
+  - Session Companion UI (Session / Tasks / Settings tabs)
+- `audio/` — Bundled audio assets
 
-**Permissions:**
+### Storage
 
-- `storage` - Save user preferences
-- `host_permissions` for `https://in.flow.club/*` - Run content script on Flow Club
+- Uses `chrome.storage.local`
+- Stores:
+  - Audio preferences
+  - Task lists
+- Data persists across refreshes and browser restarts
+- Cleared only if the extension is removed or reset
 
 ---
 
-## Troubleshooting
+## Permissions
 
-**No audio playing:**
-- Check that you've granted audio autoplay permissions to Flow Club
-- Try clicking anywhere on the page first (browser autoplay restrictions)
-- Check extension settings - ensure tick/voice are enabled
-- Verify volume levels are not set to 0%
-
-**Timer not detected:**
-- Ensure you're on an active Flow Club session page (`in.flow.club`)
-- Check browser console for `[Flow Club Audio]` logs
-- Try refreshing the page
-
-**Audio cutting out:**
-- Check your system volume
-- Try adjusting the extension's volume sliders
-- Ensure other audio isn't conflicting
+- `storage` — Save user preferences and task lists
+- `host_permissions`: `https://in.flow.club/*`  
+  Required to detect session timers and integrate with Flow Club pages
 
 ---
 
@@ -132,18 +140,36 @@ All audio files are included in the `/audio/` directory:
 
 This extension:
 - ✅ Runs entirely locally in your browser
-- ✅ Only accesses Flow Club pages you visit
-- ✅ Stores settings locally (chrome.storage.local)
-- ❌ Does NOT send any data to external servers
-- ❌ Does NOT track your activity
+- ✅ Only operates on Flow Club pages you visit
+- ✅ Stores data locally in the extension
+- ❌ Does NOT send data to external servers
+- ❌ Does NOT track activity or analytics
+
+---
+
+## Troubleshooting
+
+**No audio playing**
+- Click anywhere on the page (browser autoplay restrictions)
+- Check extension settings (tick/voice enabled, volume > 0)
+- Verify Flow Club has audio permissions
+
+**Timer not detected**
+- Ensure you’re on an active Flow Club session page
+- Refresh the page
+- Check the console for `[Flow Club Companion]` logs
+
+**Tasks missing**
+- Tasks are stored locally in the extension
+- Removing or resetting the extension will clear them
 
 ---
 
 ## Development
 
-To modify the extension:
+To test changes:
 
-1. Make changes to the code
+1. Update the code
 2. Go to `chrome://extensions/`
 3. Click the refresh icon on the extension card
 4. Reload any Flow Club tabs
@@ -152,11 +178,14 @@ To modify the extension:
 
 ## License
 
-MIT License - Feel free to use and modify
+MIT License — feel free to use and modify.
 
 ---
 
 ## Credits
-Built by Liddy 🦥✨ · [Lydia Studio](https://lydiastud.io) for Flow Club users who want audio feedback during focus sessions.
 
-[Flowmate](https://flowmate.club) - a more customizable focus timer
+Built by **Liddy 🦥✨** · [Lydia Studio](https://lydiastud.io)  
+for Flow Club users who want calm, supportive focus tools.
+
+Also check out:  
+[Flowmate](https://flowmate.club) — a more customizable standalone focus timer
