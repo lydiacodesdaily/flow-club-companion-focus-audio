@@ -12,11 +12,29 @@ const DEFAULT_SETTINGS = {
   tickSound: 'tick-tock' // tick-tock, tick, beep1, beep2, ding, none
 };
 
+// Utility: Debounce function for auto-save
+function debounce(func, delay) {
+  let timeoutId;
+  return function (...args) {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func.apply(this, args), delay);
+  };
+}
+
 // Task List Management
 class TaskListManager {
   constructor() {
     this.lists = {};
     this.currentListId = null;
+    this.draggedElement = null;
+    this.draggedTaskId = null;
+
+    // Debounced save function for auto-save (500ms delay)
+    this.debouncedSave = debounce(() => {
+      this.saveData();
+      this.showSavedIndicator();
+    }, 500);
+
     this.loadData();
   }
 
@@ -113,6 +131,58 @@ class TaskListManager {
       this.saveData();
       this.render();
     }
+  }
+
+  // Edit task text (for inline editing)
+  updateTaskText(listId, taskId, newText) {
+    if (this.lists[listId]) {
+      const task = this.lists[listId].tasks.find(t => t.id === taskId);
+      if (task && newText.trim()) {
+        task.text = newText.trim();
+        this.debouncedSave();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Reorder tasks (for drag-and-drop)
+  reorderTasks(listId, fromIndex, toIndex) {
+    if (this.lists[listId]) {
+      const tasks = this.lists[listId].tasks;
+      const [movedTask] = tasks.splice(fromIndex, 1);
+      tasks.splice(toIndex, 0, movedTask);
+      this.debouncedSave();
+      this.render();
+    }
+  }
+
+  // Show a subtle "Saved" indicator
+  showSavedIndicator() {
+    const container = document.getElementById('taskListContainer');
+
+    // Remove existing indicator if present
+    let indicator = container.querySelector('.saved-indicator');
+    if (indicator) {
+      indicator.remove();
+    }
+
+    // Create and show new indicator
+    indicator = document.createElement('div');
+    indicator.className = 'saved-indicator';
+    indicator.textContent = 'Saved';
+    container.appendChild(indicator);
+
+    // Fade in
+    requestAnimationFrame(() => {
+      indicator.classList.add('show');
+    });
+
+    // Fade out and remove after 1.5s
+    setTimeout(() => {
+      indicator.classList.remove('show');
+      setTimeout(() => indicator.remove(), 300);
+    }, 1500);
   }
 
   getCurrentList() {
@@ -219,31 +289,208 @@ class TaskListManager {
       return;
     }
 
-    container.innerHTML = list.tasks.map(task => `
-      <div class="task-item">
+    container.innerHTML = list.tasks.map((task, index) => `
+      <div class="task-item" draggable="true" data-task-id="${task.id}" data-task-index="${index}">
+        <span class="drag-handle" title="Drag to reorder">⋮⋮</span>
         <input
           type="checkbox"
           class="task-checkbox"
           ${task.completed ? 'checked' : ''}
           data-task-id="${task.id}"
         />
-        <div class="task-text ${task.completed ? 'completed' : ''}">${this.escapeHtml(task.text)}</div>
+        <div class="task-text ${task.completed ? 'completed' : ''}" data-task-id="${task.id}">${this.escapeHtml(task.text)}</div>
         <button class="task-delete" data-task-id="${task.id}">×</button>
       </div>
     `).join('');
 
-    // Add event listeners
+    // Add event listeners for checkboxes
     container.querySelectorAll('.task-checkbox').forEach(checkbox => {
       checkbox.addEventListener('change', (e) => {
         this.toggleTask(this.currentListId, e.target.dataset.taskId);
       });
     });
 
+    // Add event listeners for delete buttons
     container.querySelectorAll('.task-delete').forEach(btn => {
       btn.addEventListener('click', (e) => {
         this.deleteTask(this.currentListId, e.target.dataset.taskId);
       });
     });
+
+    // Add event listeners for inline editing
+    container.querySelectorAll('.task-text').forEach(textEl => {
+      textEl.addEventListener('click', (e) => {
+        this.startInlineEdit(e.target);
+      });
+    });
+
+    // Add drag-and-drop event listeners
+    const taskItems = container.querySelectorAll('.task-item');
+    taskItems.forEach(item => {
+      item.addEventListener('dragstart', (e) => this.handleDragStart(e));
+      item.addEventListener('dragover', (e) => this.handleDragOver(e));
+      item.addEventListener('drop', (e) => this.handleDrop(e));
+      item.addEventListener('dragend', (e) => this.handleDragEnd(e));
+    });
+  }
+
+  // Inline editing: Convert text to input field
+  startInlineEdit(textEl) {
+    const taskId = textEl.dataset.taskId;
+    const currentText = textEl.textContent;
+
+    // Create input element
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'task-edit-input';
+    input.value = currentText;
+    input.dataset.taskId = taskId;
+    input.dataset.originalText = currentText;
+    input.dataset.committed = 'false'; // Track if already committed
+
+    // Replace text element with input
+    textEl.replaceWith(input);
+    input.focus();
+    input.select();
+
+    // Handle Enter key to commit
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this.commitInlineEdit(input);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        this.cancelInlineEdit(input);
+      }
+    });
+
+    // Handle blur to commit
+    input.addEventListener('blur', () => {
+      // Small delay to allow other events to process
+      setTimeout(() => this.commitInlineEdit(input), 100);
+    });
+  }
+
+  // Commit the inline edit
+  commitInlineEdit(input) {
+    if (!input || !input.parentElement) return;
+
+    // Prevent double-commit
+    if (input.dataset.committed === 'true') return;
+    input.dataset.committed = 'true';
+
+    const taskId = input.dataset.taskId;
+    const newText = input.value.trim();
+    const originalText = input.dataset.originalText;
+
+    // If empty, revert to original
+    const finalText = newText || originalText;
+
+    // Update task text
+    const success = this.updateTaskText(this.currentListId, taskId, finalText);
+
+    if (success) {
+      // Re-render to show updated text
+      this.render();
+    } else {
+      // If update failed, just restore the view
+      this.render();
+    }
+  }
+
+  // Cancel the inline edit
+  cancelInlineEdit(input) {
+    if (!input || !input.parentElement) return;
+
+    // Mark as committed to prevent blur from triggering
+    input.dataset.committed = 'true';
+
+    // Just re-render to restore original state
+    this.render();
+  }
+
+  // Drag-and-drop handlers
+  handleDragStart(e) {
+    this.draggedElement = e.currentTarget;
+    this.draggedTaskId = e.currentTarget.dataset.taskId;
+    e.currentTarget.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', e.currentTarget.innerHTML);
+  }
+
+  handleDragOver(e) {
+    if (e.preventDefault) {
+      e.preventDefault();
+    }
+    e.dataTransfer.dropEffect = 'move';
+
+    // Remove drag-over classes from all items first
+    const container = document.getElementById('taskListContainer');
+    container.querySelectorAll('.task-item').forEach(item => {
+      item.classList.remove('drag-over-top', 'drag-over-bottom');
+    });
+
+    const targetItem = e.currentTarget;
+    if (targetItem === this.draggedElement || !targetItem.classList.contains('task-item')) {
+      return false;
+    }
+
+    // Calculate if we should show indicator above or below the target
+    const rect = targetItem.getBoundingClientRect();
+    const midpoint = rect.top + rect.height / 2;
+
+    // Show indicator on the side where the item will be inserted
+    if (e.clientY < midpoint) {
+      // Cursor is in top half - will insert above
+      targetItem.classList.add('drag-over-top');
+    } else {
+      // Cursor is in bottom half - will insert below
+      targetItem.classList.add('drag-over-bottom');
+    }
+
+    return false;
+  }
+
+  handleDrop(e) {
+    if (e.stopPropagation) {
+      e.stopPropagation();
+    }
+
+    const targetItem = e.currentTarget;
+    const isBottom = targetItem.classList.contains('drag-over-bottom');
+    targetItem.classList.remove('drag-over-top', 'drag-over-bottom');
+
+    if (this.draggedElement !== targetItem) {
+      const fromIndex = parseInt(this.draggedElement.dataset.taskIndex);
+      let toIndex = parseInt(targetItem.dataset.taskIndex);
+
+      // If dropping below, increment the target index
+      if (isBottom) {
+        toIndex++;
+      }
+
+      // Adjust for the fact that removing the item shifts indices
+      if (fromIndex < toIndex) {
+        toIndex--;
+      }
+
+      this.reorderTasks(this.currentListId, fromIndex, toIndex);
+    }
+
+    return false;
+  }
+
+  handleDragEnd(e) {
+    e.currentTarget.classList.remove('dragging');
+
+    // Remove drag-over classes from all items
+    const container = document.getElementById('taskListContainer');
+    container.querySelectorAll('.task-item').forEach(item => {
+      item.classList.remove('drag-over-top', 'drag-over-bottom');
+    });
+
+    this.draggedElement = null;
+    this.draggedTaskId = null;
   }
 
   escapeHtml(text) {

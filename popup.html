@@ -503,11 +503,52 @@
       margin-bottom: 4px;
       background: #f8f9fa;
       border-radius: 6px;
-      transition: background 0.2s;
+      transition: background 0.2s, opacity 0.2s;
+      position: relative;
     }
 
     .task-item:hover {
       background: #f0f1f2;
+    }
+
+    /* Drag handle */
+    .drag-handle {
+      color: #ccc;
+      font-size: 14px;
+      line-height: 1;
+      cursor: grab;
+      user-select: none;
+      opacity: 0;
+      transition: opacity 0.2s, color 0.2s;
+      padding-top: 1px;
+    }
+
+    .task-item:hover .drag-handle {
+      opacity: 1;
+    }
+
+    .drag-handle:hover {
+      color: #5D5FEF;
+    }
+
+    .drag-handle:active {
+      cursor: grabbing;
+    }
+
+    /* Dragging states */
+    .task-item.dragging {
+      opacity: 0.5;
+      background: #e8e9f0;
+    }
+
+    .task-item.drag-over-top {
+      border-top: 2px solid #5D5FEF;
+      padding-top: 3px;
+    }
+
+    .task-item.drag-over-bottom {
+      border-bottom: 2px solid #5D5FEF;
+      padding-bottom: 3px;
     }
 
     .task-checkbox {
@@ -524,11 +565,35 @@
       color: #333;
       line-height: 1.5;
       word-wrap: break-word;
+      cursor: text;
+      padding: 2px 4px;
+      margin: -2px -4px;
+      border-radius: 3px;
+      transition: background 0.2s;
+    }
+
+    .task-text:hover {
+      background: rgba(93, 95, 239, 0.08);
     }
 
     .task-text.completed {
       text-decoration: line-through;
       color: #888;
+    }
+
+    /* Inline edit input */
+    .task-edit-input {
+      flex: 1;
+      font-size: 13px;
+      color: #333;
+      line-height: 1.5;
+      padding: 2px 6px;
+      margin: -2px -6px;
+      border: 1.5px solid #5D5FEF;
+      border-radius: 4px;
+      outline: none;
+      background: white;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
 
     .task-delete {
@@ -539,7 +604,7 @@
       font-size: 15px;
       cursor: pointer;
       border-radius: 4px;
-      opacity: 0.5;
+      opacity: 0.3;
       transition: all 0.2s;
     }
 
@@ -659,6 +724,43 @@
       padding: 8px 10px;
       background: transparent;
       border-radius: 6px;
+    }
+
+    /* Saved indicator */
+    .saved-indicator {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      padding: 6px 12px;
+      background: #5D5FEF;
+      color: white;
+      font-size: 11px;
+      font-weight: 500;
+      border-radius: 4px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      z-index: 1000;
+    }
+
+    .saved-indicator.show {
+      opacity: 1;
+    }
+
+    /* Prevent text selection during drag */
+    .task-item[draggable="true"] {
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+    }
+
+    /* Allow text selection for task text when not dragging */
+    .task-text {
+      user-select: text;
+      -webkit-user-select: text;
+      -moz-user-select: text;
+      -ms-user-select: text;
     }
   </style>
 </head>
@@ -818,7 +920,7 @@
       <textarea
         id="addTaskInput"
         class="add-task-input"
-        placeholder="Add a task and press Enter…"
+        placeholder="Add a task or paste a list (press Enter)"
         rows="1"
         style="display: none;"
       ></textarea>
