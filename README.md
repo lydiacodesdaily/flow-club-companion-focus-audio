@@ -32,6 +32,7 @@ A calm, reusable task list designed specifically for Flow Club sessions.
 - Add, check off, or remove tasks
 - **One-click “Copy for Flow Club”** to paste tasks directly into the Flow Club *My Goals* section
 - Tasks are stored **locally in the extension** — nothing is shared unless you copy it
+- Task items are editable and can be rearranged via drag-and-drop
 
 This is intentionally lightweight and flexible — not a full task manager.
 

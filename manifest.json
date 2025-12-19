@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Flow Club Companion",
   "description": "A gentle companion for Flow Club sessions with customizable focus audio and simple task lists to support time awareness and focus.",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "permissions": ["storage"],
   "host_permissions": [
     "https://in.flow.club/*"
