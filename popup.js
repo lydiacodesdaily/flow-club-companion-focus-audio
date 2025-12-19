@@ -295,6 +295,7 @@ function loadSettings() {
       tickSound: data.tickSound !== undefined ? data.tickSound : DEFAULT_SETTINGS.tickSound
     };
 
+    // Set all form values synchronously before removing loading class
     document.getElementById('audioOn').checked = settings.audioOn;
     document.getElementById('tickEnabled').checked = settings.tickEnabled;
     document.getElementById('voiceEnabled').checked = settings.voiceEnabled;
@@ -312,6 +313,13 @@ function loadSettings() {
     document.getElementById('voiceVolumeValue').textContent = voiceVolume + '%';
 
     updateControlStates(settings.audioOn);
+
+    // Remove loading class after DOM has rendered the changes
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        document.body.classList.remove('loading');
+      });
+    });
   });
 }
 

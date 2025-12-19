@@ -92,10 +92,10 @@ class AudioPlayer {
     this.audioCache = new Map();
     this.settings = {
       audioOn: true,
-      tickEnabled: true,
+      tickEnabled: false,
       voiceEnabled: true,
       secondsCountdownEnabled: true,
-      muteDuringBreaks: false,
+      muteDuringBreaks: true,
       tickVolume: 0.3,
       voiceVolume: 0.85,
       announcementInterval: 1, // minutes
