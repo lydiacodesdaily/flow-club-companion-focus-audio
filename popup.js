@@ -28,6 +28,8 @@ class TaskListManager {
     this.currentListId = null;
     this.draggedElement = null;
     this.draggedTaskId = null;
+    this.lastIdTimestamp = 0;
+    this.idCounter = 0;
 
     // Debounced save function for auto-save (500ms delay)
     this.debouncedSave = debounce(() => {
@@ -36,6 +38,18 @@ class TaskListManager {
     }, 500);
 
     this.loadData();
+  }
+
+  // Generate unique ID even when called multiple times in the same millisecond
+  generateUniqueId() {
+    const now = Date.now();
+    if (now === this.lastIdTimestamp) {
+      this.idCounter++;
+    } else {
+      this.lastIdTimestamp = now;
+      this.idCounter = 0;
+    }
+    return `${now}-${this.idCounter}`;
   }
 
   loadData() {
@@ -56,7 +70,7 @@ class TaskListManager {
   }
 
   createList(name) {
-    const id = Date.now().toString();
+    const id = this.generateUniqueId();
     this.lists[id] = {
       name: name,
       tasks: []
@@ -77,7 +91,7 @@ class TaskListManager {
 
   duplicateList(id) {
     if (this.lists[id]) {
-      const newId = Date.now().toString();
+      const newId = this.generateUniqueId();
       const originalName = this.lists[id].name;
       this.lists[newId] = {
         name: originalName + ' (copy)',
@@ -105,7 +119,7 @@ class TaskListManager {
   addTask(listId, text) {
     if (this.lists[listId]) {
       this.lists[listId].tasks.push({
-        id: Date.now().toString(),
+        id: this.generateUniqueId(),
         text: text,
         completed: false
       });
