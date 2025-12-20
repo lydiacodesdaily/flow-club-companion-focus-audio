@@ -116,12 +116,12 @@ class TaskListManager {
     }
   }
 
-  addTask(listId, text) {
+  addTask(listId, text, completed = false) {
     if (this.lists[listId]) {
       this.lists[listId].tasks.push({
         id: this.generateUniqueId(),
         text: text,
-        completed: false
+        completed: completed
       });
       this.saveData();
       this.render();
@@ -208,7 +208,7 @@ class TaskListManager {
     if (!list || list.tasks.length === 0) return false;
 
     const text = list.tasks
-      .map(task => `- [ ] ${task.text}`)
+      .map(task => `- [${task.completed ? 'x' : ' '}] ${task.text}`)
       .join('\n');
 
     navigator.clipboard.writeText(text).then(() => {
@@ -739,14 +739,16 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!input) return;
 
       // Check if input contains markdown checklist format (newlines with "- [ ]" or "- [x]")
-      if (input.includes('\n') && /^-\s*\[[\sx]\]/m.test(input)) {
+      if (input.includes('\n') && /^-\s*\[[\sxX]\]/m.test(input)) {
         // Parse markdown checklist format
         const lines = input.split('\n');
         lines.forEach(line => {
-          // Match patterns like "- [ ] task" or "- [x] task" or "- task"
-          const match = line.trim().match(/^-\s*(?:\[[\sx]\]\s*)?(.+)$/);
-          if (match && match[1].trim()) {
-            taskManager.addTask(taskManager.currentListId, match[1].trim());
+          // Match patterns like "- [ ] task" or "- [x] task" or "- [X] task" or "- task"
+          const match = line.trim().match(/^-\s*(?:\[([\sxX])\]\s*)?(.+)$/);
+          if (match && match[2] && match[2].trim()) {
+            // Check if the checkbox is marked (x or X)
+            const isCompleted = match[1] && match[1].toLowerCase() === 'x';
+            taskManager.addTask(taskManager.currentListId, match[2].trim(), isCompleted);
           }
         });
       } else {
