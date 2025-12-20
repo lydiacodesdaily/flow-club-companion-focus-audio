@@ -2,12 +2,12 @@
 
 const DEFAULT_SETTINGS = {
   audioOn: true,
-  tickEnabled: false,
+  tickEnabled: true,
   voiceEnabled: true,
-  secondsCountdownEnabled: true,
+  secondsCountdownEnabled: false,
   muteDuringBreaks: true,
-  tickVolume: 0.3,
-  voiceVolume: 0.85,
+  tickVolume: 0.08,
+  voiceVolume: 0.3,
   announcementInterval: 1, // minutes
   tickSound: 'tick-tock' // tick-tock, tick, beep1, beep2, ding, none
 };

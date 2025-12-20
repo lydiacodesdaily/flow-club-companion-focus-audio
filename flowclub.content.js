@@ -164,7 +164,22 @@ class AudioPlayer {
     });
   }
 
+  // Check if extension context is valid
+  isExtensionContextValid() {
+    try {
+      // Try to access chrome.runtime.id - if it throws, context is invalidated
+      return chrome.runtime?.id !== undefined;
+    } catch (err) {
+      return false;
+    }
+  }
+
   getAudio(path, volume = 1.0, forceNew = false) {
+    // Check if extension context is still valid
+    if (!this.isExtensionContextValid()) {
+      throw new Error('Extension context invalidated - please refresh the page');
+    }
+
     // For voice files, create fresh Audio objects to prevent stale state after hours of use
     // Also refresh if cached audio is older than 1 hour
     const now = Date.now();
@@ -191,6 +206,11 @@ class AudioPlayer {
     if (this.settings.tickSound === 'none') return; // Silent mode
 
     try {
+      // Check if extension context is still valid before attempting to play
+      if (!this.isExtensionContextValid()) {
+        return; // Silently skip tick sounds if context is invalid
+      }
+
       let tickFile;
 
       switch (this.settings.tickSound) {
@@ -232,7 +252,11 @@ class AudioPlayer {
         await freshAudio.play();
       }
     } catch (err) {
-      // Log errors for debugging but don't crash
+      // Check if this is an extension context error
+      if (err.message && err.message.includes('Extension context invalidated')) {
+        return; // Silently skip tick sounds if extension was reloaded
+      }
+      // Log other errors for debugging but don't crash
       console.error('[Flow Club Audio] Tick playback failed:', err);
     }
   }
@@ -242,6 +266,12 @@ class AudioPlayer {
     if (this.settings.muteDuringBreaks && isBreak) return;
 
     try {
+      // Check if extension context is still valid before attempting to play
+      if (!this.isExtensionContextValid()) {
+        console.warn('[Flow Club Audio] Extension context invalidated - audio disabled. Please refresh the page.');
+        return;
+      }
+
       // Create a fresh Audio object for voice announcements to prevent stale state
       const audio = this.getAudio(path, this.settings.voiceVolume, true);
 
@@ -260,7 +290,12 @@ class AudioPlayer {
         await audio.play();
       }
     } catch (err) {
-      // Log the error for debugging but don't crash
+      // Check if this is an extension context error
+      if (err.message && err.message.includes('Extension context invalidated')) {
+        console.warn('[Flow Club Audio] Extension was reloaded. Please refresh this page to restore audio.');
+        return;
+      }
+      // Log other errors for debugging but don't crash
       console.error('[Flow Club Audio] Voice playback failed:', err);
     }
   }
@@ -270,6 +305,12 @@ class AudioPlayer {
     if (this.settings.muteDuringBreaks && isBreak) return;
 
     try {
+      // Check if extension context is still valid before attempting to play
+      if (!this.isExtensionContextValid()) {
+        console.warn('[Flow Club Audio] Extension context invalidated - audio disabled. Please refresh the page.');
+        return;
+      }
+
       // Create a fresh Audio object for ding to prevent stale state
       const audio = this.getAudio('audio/effects/ding.mp3', this.settings.voiceVolume, true);
 
@@ -288,7 +329,12 @@ class AudioPlayer {
         await audio.play();
       }
     } catch (err) {
-      // Log the error for debugging but don't crash
+      // Check if this is an extension context error
+      if (err.message && err.message.includes('Extension context invalidated')) {
+        console.warn('[Flow Club Audio] Extension was reloaded. Please refresh this page to restore audio.');
+        return;
+      }
+      // Log other errors for debugging but don't crash
       console.error('[Flow Club Audio] Ding playback failed:', err);
     }
   }
