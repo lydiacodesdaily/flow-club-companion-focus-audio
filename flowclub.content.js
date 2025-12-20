@@ -44,14 +44,12 @@ function isInLounge() {
 }
 
 function isInPreWorkPhase() {
-  // Check if we're in the pre-work phase (check-in, introductions, etc.)
-  // This phase occurs after entering the session but before the first work session starts
-  // Look for indicators that we're still in setup/check-in rather than an actual session
+  // Check if we're in the pre-work phase (waiting in lounge before session starts)
+  // Look for indicators that we're still in the lounge rather than inside the session
   const root = document.getElementById('root') || document.body;
   const textContent = root.textContent || '';
 
-  // Check for common pre-work phase text patterns
-  // These patterns indicate we're in check-in or intro phase, not a break
+  // Check for lounge phase text patterns (before clicking "Enter Session")
   const preWorkIndicators = [
     'Starting in',
     'Get ready',
@@ -59,6 +57,24 @@ function isInPreWorkPhase() {
   ];
 
   return preWorkIndicators.some(indicator =>
+    textContent.toLowerCase().includes(indicator.toLowerCase())
+  );
+}
+
+function isInCheckInPhase() {
+  // Check if we're in the check-in phase (goal sharing after entering session)
+  // This occurs after entering the session but before the first work session starts
+  const root = document.getElementById('root') || document.body;
+  const textContent = root.textContent || '';
+
+  // Check for check-in phase text patterns
+  const checkInIndicators = [
+    'Muting for work in',
+    'share goals',
+    'Share your goals'
+  ];
+
+  return checkInIndicators.some(indicator =>
     textContent.toLowerCase().includes(indicator.toLowerCase())
   );
 }
@@ -90,6 +106,7 @@ function getTimerElement() {
 class AudioPlayer {
   constructor() {
     this.audioCache = new Map();
+    this.audioCacheCreatedAt = new Map(); // Track when audio objects were created
     this.settings = {
       audioOn: true,
       tickEnabled: false,
@@ -115,6 +132,16 @@ class AudioPlayer {
         this.loadSettings();
       }
     });
+
+    // Periodically refresh audio cache to prevent staleness (every 30 minutes)
+    setInterval(() => this.refreshAudioCache(), 30 * 60 * 1000);
+  }
+
+  // Clear and refresh audio cache to prevent stale audio elements
+  refreshAudioCache() {
+    console.log('[Flow Club Audio] Refreshing audio cache to prevent staleness');
+    this.audioCache.clear();
+    this.audioCacheCreatedAt.clear();
   }
 
   loadSettings() {
@@ -139,11 +166,17 @@ class AudioPlayer {
 
   getAudio(path, volume = 1.0, forceNew = false) {
     // For voice files, create fresh Audio objects to prevent stale state after hours of use
-    if (forceNew || !this.audioCache.has(path)) {
+    // Also refresh if cached audio is older than 1 hour
+    const now = Date.now();
+    const cacheAge = this.audioCacheCreatedAt.get(path);
+    const isStale = cacheAge && (now - cacheAge > 60 * 60 * 1000); // 1 hour
+
+    if (forceNew || !this.audioCache.has(path) || isStale) {
       const audio = new Audio(chrome.runtime.getURL(path));
       audio.volume = volume;
-      if (!forceNew) {
+      if (!forceNew && !isStale) {
         this.audioCache.set(path, audio);
+        this.audioCacheCreatedAt.set(path, now);
       }
       return audio;
     }
@@ -186,9 +219,21 @@ class AudioPlayer {
 
       const audio = this.getAudio(tickFile, this.settings.tickVolume);
       audio.currentTime = 0; // Reset to start
-      await audio.play();
+
+      try {
+        await audio.play();
+      } catch (playErr) {
+        // If play fails (e.g., after computer sleep), try refreshing cache and playing again
+        // Only retry once to avoid infinite loops
+        console.warn('[Flow Club Audio] Tick play failed, refreshing cache and retrying...', playErr);
+        this.refreshAudioCache();
+        const freshAudio = this.getAudio(tickFile, this.settings.tickVolume);
+        freshAudio.currentTime = 0;
+        await freshAudio.play();
+      }
     } catch (err) {
-      // Silently fail - might be autoplay restriction
+      // Log errors for debugging but don't crash
+      console.error('[Flow Club Audio] Tick playback failed:', err);
     }
   }
 
@@ -199,10 +244,24 @@ class AudioPlayer {
     try {
       // Create a fresh Audio object for voice announcements to prevent stale state
       const audio = this.getAudio(path, this.settings.voiceVolume, true);
+
+      // Ensure the audio is loaded before playing (fixes issues after computer sleep)
+      audio.load();
       audio.currentTime = 0;
-      await audio.play();
+
+      // Add a retry mechanism in case the first play fails
+      try {
+        await audio.play();
+      } catch (playErr) {
+        // If play fails, try once more after a short delay (common after sleep/suspend)
+        console.warn('[Flow Club Audio] First play attempt failed, retrying...', playErr);
+        await new Promise(resolve => setTimeout(resolve, 100));
+        audio.load(); // Reload the audio
+        await audio.play();
+      }
     } catch (err) {
-      // Silently fail - might be autoplay restriction
+      // Log the error for debugging but don't crash
+      console.error('[Flow Club Audio] Voice playback failed:', err);
     }
   }
 
@@ -213,28 +272,54 @@ class AudioPlayer {
     try {
       // Create a fresh Audio object for ding to prevent stale state
       const audio = this.getAudio('audio/effects/ding.mp3', this.settings.voiceVolume, true);
+
+      // Ensure the audio is loaded before playing (fixes issues after computer sleep)
+      audio.load();
       audio.currentTime = 0;
-      await audio.play();
+
+      // Add a retry mechanism in case the first play fails
+      try {
+        await audio.play();
+      } catch (playErr) {
+        // If play fails, try once more after a short delay (common after sleep/suspend)
+        console.warn('[Flow Club Audio] Ding play attempt failed, retrying...', playErr);
+        await new Promise(resolve => setTimeout(resolve, 100));
+        audio.load(); // Reload the audio
+        await audio.play();
+      }
     } catch (err) {
-      // Silently fail - might be autoplay restriction
+      // Log the error for debugging but don't crash
+      console.error('[Flow Club Audio] Ding playback failed:', err);
     }
   }
 
-  // Detect if we're in a break based on initial session length
+  // Detect if we're in a break based on initial session length or check-in phase
   detectSessionType(currentSeconds) {
+    // Check if we're in the check-in phase (goal sharing) - treat this as a "break" for muting purposes
+    if (isInCheckInPhase()) {
+      this.isCurrentSessionBreak = true;
+      return this.isCurrentSessionBreak;
+    }
+
     // If this is a new session (timer jumped up or first time), record the initial length
     if (this.sessionStartSeconds === null || currentSeconds > this.sessionStartSeconds) {
       this.sessionStartSeconds = currentSeconds;
+      // When joining mid-session, we need to estimate the original duration
+      // Round up to nearest minute to better detect breaks when joining late
       const initialMinutes = Math.ceil(currentSeconds / 60);
 
-      // Check if we're in a pre-work phase (check-in, intro, etc.)
+      // Check if we're in the pre-work phase (lounge, before entering session)
       // If so, this is NOT a break, even if the timer is 2-5 minutes
       if (isInPreWorkPhase()) {
         this.isCurrentSessionBreak = false;
       } else {
         // Breaks are typically 2, 3, or 5 minutes at Flow Club
-        this.isCurrentSessionBreak = initialMinutes <= 5 &&
-          (initialMinutes === 2 || initialMinutes === 3 || initialMinutes === 5);
+        // When joining late, we might see 1 minute less, so accept ranges:
+        // 2-min break: might see 1-2 min remaining
+        // 3-min break: might see 2-3 min remaining
+        // 5-min break: might see 4-5 min remaining
+        // Accept 1-5 minutes as potential breaks (excludes work sessions which are 25+ min)
+        this.isCurrentSessionBreak = initialMinutes >= 1 && initialMinutes <= 5;
       }
     }
     return this.isCurrentSessionBreak;
@@ -331,10 +416,33 @@ class FlowClubAudioCompanion {
     }
 
     const candidateEl = this.lockedTimerEl?.isConnected ? this.lockedTimerEl : getTimerElement();
-    if (!candidateEl) return;
+
+    // If timer element disappears (session ended), clean up and stop audio
+    if (!candidateEl) {
+      if (this.lastSeenSeconds !== null) {
+        console.log('[Flow Club Audio] Timer disappeared, session ended - cleaning up');
+        this.lastSeenSeconds = null;
+        this.lockedTimerEl = null;
+        this.changeCount = 0;
+        this.lastTimerTextSeen = null;
+        this.audioPlayer.resetSession();
+      }
+      return;
+    }
 
     const rawText = (candidateEl.textContent || '').trim();
-    if (!TIME_RE.test(rawText)) return;
+    if (!TIME_RE.test(rawText)) {
+      // Timer element exists but doesn't show valid time (session ended)
+      if (this.lastSeenSeconds !== null) {
+        console.log('[Flow Club Audio] Timer shows invalid time, session ended - cleaning up');
+        this.lastSeenSeconds = null;
+        this.lockedTimerEl = null;
+        this.changeCount = 0;
+        this.lastTimerTextSeen = null;
+        this.audioPlayer.resetSession();
+      }
+      return;
+    }
 
     // Lock onto timer element once we see it change a couple times
     if (rawText !== this.lastTimerTextSeen) {
