@@ -106,7 +106,6 @@ function getTimerElement() {
 class AudioPlayer {
   constructor() {
     this.audioCache = new Map();
-    this.audioCacheCreatedAt = new Map(); // Track when audio objects were created
     this.settings = {
       audioOn: true,
       tickEnabled: false,
@@ -132,16 +131,6 @@ class AudioPlayer {
         this.loadSettings();
       }
     });
-
-    // Periodically refresh audio cache to prevent staleness (every 30 minutes)
-    setInterval(() => this.refreshAudioCache(), 30 * 60 * 1000);
-  }
-
-  // Clear and refresh audio cache to prevent stale audio elements
-  refreshAudioCache() {
-    console.log('[Flow Club Audio] Refreshing audio cache to prevent staleness');
-    this.audioCache.clear();
-    this.audioCacheCreatedAt.clear();
   }
 
   loadSettings() {
@@ -180,18 +169,13 @@ class AudioPlayer {
       throw new Error('Extension context invalidated - please refresh the page');
     }
 
-    // For voice files, create fresh Audio objects to prevent stale state after hours of use
-    // Also refresh if cached audio is older than 1 hour
-    const now = Date.now();
-    const cacheAge = this.audioCacheCreatedAt.get(path);
-    const isStale = cacheAge && (now - cacheAge > 60 * 60 * 1000); // 1 hour
-
-    if (forceNew || !this.audioCache.has(path) || isStale) {
+    // Create fresh audio for voice announcements (forceNew=true) to avoid stale state
+    // Cache tick sounds for better performance
+    if (forceNew || !this.audioCache.has(path)) {
       const audio = new Audio(chrome.runtime.getURL(path));
       audio.volume = volume;
-      if (!forceNew && !isStale) {
+      if (!forceNew) {
         this.audioCache.set(path, audio);
-        this.audioCacheCreatedAt.set(path, now);
       }
       return audio;
     }
@@ -243,11 +227,10 @@ class AudioPlayer {
       try {
         await audio.play();
       } catch (playErr) {
-        // If play fails (e.g., after computer sleep), try refreshing cache and playing again
+        // If play fails (e.g., after computer sleep), try creating a fresh audio object
         // Only retry once to avoid infinite loops
-        console.warn('[Flow Club Audio] Tick play failed, refreshing cache and retrying...', playErr);
-        this.refreshAudioCache();
-        const freshAudio = this.getAudio(tickFile, this.settings.tickVolume);
+        const freshAudio = new Audio(chrome.runtime.getURL(tickFile));
+        freshAudio.volume = this.settings.tickVolume;
         freshAudio.currentTime = 0;
         await freshAudio.play();
       }
@@ -268,7 +251,7 @@ class AudioPlayer {
     try {
       // Check if extension context is still valid before attempting to play
       if (!this.isExtensionContextValid()) {
-        console.warn('[Flow Club Audio] Extension context invalidated - audio disabled. Please refresh the page.');
+        // Silently skip - extension was reloaded/updated
         return;
       }
 
@@ -290,9 +273,11 @@ class AudioPlayer {
         await audio.play();
       }
     } catch (err) {
-      // Check if this is an extension context error
-      if (err.message && err.message.includes('Extension context invalidated')) {
-        console.warn('[Flow Club Audio] Extension was reloaded. Please refresh this page to restore audio.');
+      // Silently skip on extension context errors - this is expected when extension is reloaded
+      // The user can refresh the page when convenient to restore audio
+      if (err.message && (err.message.includes('Extension context invalidated') ||
+                          err.message.includes('Extension context') ||
+                          err.message.includes('chrome.runtime'))) {
         return;
       }
       // Log other errors for debugging but don't crash
@@ -307,7 +292,7 @@ class AudioPlayer {
     try {
       // Check if extension context is still valid before attempting to play
       if (!this.isExtensionContextValid()) {
-        console.warn('[Flow Club Audio] Extension context invalidated - audio disabled. Please refresh the page.');
+        // Silently skip - extension was reloaded/updated
         return;
       }
 
@@ -329,9 +314,11 @@ class AudioPlayer {
         await audio.play();
       }
     } catch (err) {
-      // Check if this is an extension context error
-      if (err.message && err.message.includes('Extension context invalidated')) {
-        console.warn('[Flow Club Audio] Extension was reloaded. Please refresh this page to restore audio.');
+      // Silently skip on extension context errors - this is expected when extension is reloaded
+      // The user can refresh the page when convenient to restore audio
+      if (err.message && (err.message.includes('Extension context invalidated') ||
+                          err.message.includes('Extension context') ||
+                          err.message.includes('chrome.runtime'))) {
         return;
       }
       // Log other errors for debugging but don't crash
@@ -466,7 +453,6 @@ class FlowClubAudioCompanion {
     // If timer element disappears (session ended), clean up and stop audio
     if (!candidateEl) {
       if (this.lastSeenSeconds !== null) {
-        console.log('[Flow Club Audio] Timer disappeared, session ended - cleaning up');
         this.lastSeenSeconds = null;
         this.lockedTimerEl = null;
         this.changeCount = 0;
@@ -480,7 +466,6 @@ class FlowClubAudioCompanion {
     if (!TIME_RE.test(rawText)) {
       // Timer element exists but doesn't show valid time (session ended)
       if (this.lastSeenSeconds !== null) {
-        console.log('[Flow Club Audio] Timer shows invalid time, session ended - cleaning up');
         this.lastSeenSeconds = null;
         this.lockedTimerEl = null;
         this.changeCount = 0;
@@ -555,10 +540,27 @@ class FlowClubAudioCompanion {
 // Initialization
 // ============================================================================
 
-const companion = new FlowClubAudioCompanion();
+// Check if extension context is valid before initializing
+function initializeExtension() {
+  try {
+    // Test if we can access chrome.runtime
+    if (!chrome.runtime?.id) {
+      console.warn('[Flow Club Audio] Extension context not available - skipping initialization');
+      return;
+    }
 
-window.addEventListener('beforeunload', () => companion.stop());
-window.addEventListener('pagehide', () => companion.stop());
+    const companion = new FlowClubAudioCompanion();
+
+    window.addEventListener('beforeunload', () => companion.stop());
+    window.addEventListener('pagehide', () => companion.stop());
+
+    // Start the companion
+    companion.start();
+    console.log('[Flow Club Audio] Extension initialized successfully');
+  } catch (err) {
+    console.warn('[Flow Club Audio] Failed to initialize extension:', err.message);
+  }
+}
 
 // Wait for page to load, then start
-setTimeout(() => companion.start(), 1000);
+setTimeout(() => initializeExtension(), 1000);
