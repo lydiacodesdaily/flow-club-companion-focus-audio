@@ -84,6 +84,7 @@ function getTimerElement() {
   const candidates = Array.from(root.querySelectorAll('div, span')).filter(
     (el) => isVisible(el) && TIME_RE.test((el.textContent || '').trim())
   );
+
   if (!candidates.length) return null;
 
   // Find the largest timer (by font size)
@@ -96,6 +97,7 @@ function getTimerElement() {
       best = c;
     }
   }
+
   return best;
 }
 
@@ -435,6 +437,8 @@ class FlowClubAudioCompanion {
     this.changeCount = 0;
     this.lastSeenSeconds = null;
     this.tickIntervalId = null;
+    this.timerMissingCount = 0; // Track how many consecutive polls without timer
+    this.TIMER_MISSING_THRESHOLD = 5; // Wait 5 seconds before giving up on timer
   }
 
   poll() {
@@ -444,36 +448,58 @@ class FlowClubAudioCompanion {
       if (this.lastSeenSeconds !== null) {
         this.lastSeenSeconds = null;
         this.audioPlayer.resetSession();
+        this.timerMissingCount = 0;
       }
       return;
     }
 
     const candidateEl = this.lockedTimerEl?.isConnected ? this.lockedTimerEl : getTimerElement();
 
-    // If timer element disappears (session ended), clean up and stop audio
+    // If timer element disappears, don't immediately give up - wait for grace period
+    // This handles React re-renders and temporary DOM changes
     if (!candidateEl) {
-      if (this.lastSeenSeconds !== null) {
-        this.lastSeenSeconds = null;
-        this.lockedTimerEl = null;
-        this.changeCount = 0;
-        this.lastTimerTextSeen = null;
-        this.audioPlayer.resetSession();
+      this.timerMissingCount++;
+
+      // Only reset if timer has been missing for multiple consecutive polls
+      if (this.timerMissingCount >= this.TIMER_MISSING_THRESHOLD) {
+        if (this.lastSeenSeconds !== null) {
+          this.lastSeenSeconds = null;
+          this.lockedTimerEl = null;
+          this.changeCount = 0;
+          this.lastTimerTextSeen = null;
+          this.audioPlayer.resetSession();
+          this.timerMissingCount = 0;
+        }
       }
       return;
     }
 
+    // Timer element found - reset missing counter
+    if (this.timerMissingCount > 0) {
+      this.timerMissingCount = 0;
+    }
+
     const rawText = (candidateEl.textContent || '').trim();
     if (!TIME_RE.test(rawText)) {
-      // Timer element exists but doesn't show valid time (session ended)
-      if (this.lastSeenSeconds !== null) {
-        this.lastSeenSeconds = null;
-        this.lockedTimerEl = null;
-        this.changeCount = 0;
-        this.lastTimerTextSeen = null;
-        this.audioPlayer.resetSession();
+      // Timer element exists but doesn't show valid time
+      this.timerMissingCount++;
+
+      // Only reset if invalid for multiple consecutive polls
+      if (this.timerMissingCount >= this.TIMER_MISSING_THRESHOLD) {
+        if (this.lastSeenSeconds !== null) {
+          this.lastSeenSeconds = null;
+          this.lockedTimerEl = null;
+          this.changeCount = 0;
+          this.lastTimerTextSeen = null;
+          this.audioPlayer.resetSession();
+          this.timerMissingCount = 0;
+        }
       }
       return;
     }
+
+    // Valid timer found - reset missing counter
+    this.timerMissingCount = 0;
 
     // Lock onto timer element once we see it change a couple times
     if (rawText !== this.lastTimerTextSeen) {
@@ -551,8 +577,22 @@ function initializeExtension() {
 
     const companion = new FlowClubAudioCompanion();
 
-    window.addEventListener('beforeunload', () => companion.stop());
-    window.addEventListener('pagehide', () => companion.stop());
+    // Handle page visibility changes (tab switching, minimizing, etc.)
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && !companion.intervalId) {
+        // Page became visible and intervals were stopped - restart them
+        companion.start();
+      }
+    });
+
+    // Handle page unload - only stop if page is truly being discarded
+    // Flow Club is a SPA, so don't stop on normal navigation
+    window.addEventListener('pagehide', (e) => {
+      if (!e.persisted) {
+        // Page is being completely discarded (not cached) - stop intervals
+        companion.stop();
+      }
+    });
 
     // Start the companion
     companion.start();
