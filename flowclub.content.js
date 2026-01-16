@@ -3,6 +3,9 @@
 // Runs on: https://in.flow.club/*
 // Provides: Tick sounds + voice announcements during Flow Club sessions
 
+// Use cross-browser API (loaded via browser-api.js before this script)
+const api = window.browserAPI || (typeof browser !== 'undefined' ? browser : chrome);
+
 // Content script loaded
 
 // ============================================================================
@@ -128,7 +131,7 @@ class AudioPlayer {
     this.loadSettings();
 
     // Listen for settings changes
-    chrome.storage.onChanged.addListener((_changes, area) => {
+    api.storage.onChanged.addListener((_changes, area) => {
       if (area === 'local') {
         this.loadSettings();
       }
@@ -136,7 +139,7 @@ class AudioPlayer {
   }
 
   loadSettings() {
-    chrome.storage.local.get(null, (data) => {
+    api.storage.local.get(null, (data) => {
       // Migrate old muteAll setting to audioOn (inverted logic)
       if (data.muteAll !== undefined) {
         this.settings.audioOn = !data.muteAll;
@@ -158,8 +161,8 @@ class AudioPlayer {
   // Check if extension context is valid
   isExtensionContextValid() {
     try {
-      // Try to access chrome.runtime.id - if it throws, context is invalidated
-      return chrome.runtime?.id !== undefined;
+      // Try to access api.runtime.id - if it throws, context is invalidated
+      return api.runtime?.id !== undefined;
     } catch (err) {
       return false;
     }
@@ -174,7 +177,7 @@ class AudioPlayer {
     // Create fresh audio for voice announcements (forceNew=true) to avoid stale state
     // Cache tick sounds for better performance
     if (forceNew || !this.audioCache.has(path)) {
-      const audio = new Audio(chrome.runtime.getURL(path));
+      const audio = new Audio(api.runtime.getURL(path));
       audio.volume = volume;
       if (!forceNew) {
         this.audioCache.set(path, audio);
@@ -231,7 +234,7 @@ class AudioPlayer {
       } catch (playErr) {
         // If play fails (e.g., after computer sleep), try creating a fresh audio object
         // Only retry once to avoid infinite loops
-        const freshAudio = new Audio(chrome.runtime.getURL(tickFile));
+        const freshAudio = new Audio(api.runtime.getURL(tickFile));
         freshAudio.volume = this.settings.tickVolume;
         freshAudio.currentTime = 0;
         await freshAudio.play();
@@ -569,8 +572,8 @@ class FlowClubAudioCompanion {
 // Check if extension context is valid before initializing
 function initializeExtension() {
   try {
-    // Test if we can access chrome.runtime
-    if (!chrome.runtime?.id) {
+    // Test if we can access the runtime API
+    if (!api.runtime?.id) {
       console.warn('[Flow Club Audio] Extension context not available - skipping initialization');
       return;
     }

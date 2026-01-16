@@ -1,5 +1,8 @@
 // popup.js - Settings UI for Flow Club Audio Companion
 
+// Use cross-browser API (loaded via browser-api.js in popup.html)
+const api = window.browserAPI || (typeof browser !== 'undefined' ? browser : chrome);
+
 const DEFAULT_SETTINGS = {
   audioOn: true,
   tickEnabled: true,
@@ -53,7 +56,7 @@ class TaskListManager {
   }
 
   loadData() {
-    chrome.storage.local.get(['taskLists', 'currentTaskListId'], (data) => {
+    api.storage.local.get(['taskLists', 'currentTaskListId'], (data) => {
       this.lists = data.taskLists || {};
       this.currentListId = data.currentTaskListId || null;
 
@@ -63,7 +66,7 @@ class TaskListManager {
   }
 
   saveData() {
-    chrome.storage.local.set({
+    api.storage.local.set({
       taskLists: this.lists,
       currentTaskListId: this.currentListId
     });
@@ -531,15 +534,15 @@ function updateControlStates(isAudioOn) {
 
 // Load settings and update UI
 function loadSettings() {
-  chrome.storage.local.get(null, (data) => {
+  api.storage.local.get(null, (data) => {
     // Migrate old muteAll setting to audioOn
     let audioOn = DEFAULT_SETTINGS.audioOn;
     if (data.muteAll !== undefined) {
       // Convert old muteAll to new audioOn (inverted logic)
       audioOn = !data.muteAll;
       // Remove old setting and save new one
-      chrome.storage.local.remove('muteAll');
-      chrome.storage.local.set({ audioOn: audioOn });
+      api.storage.local.remove('muteAll');
+      api.storage.local.set({ audioOn: audioOn });
     } else if (data.audioOn !== undefined) {
       audioOn = data.audioOn;
     }
@@ -598,7 +601,7 @@ function saveSettings() {
     tickSound: document.getElementById('tickSound').value
   };
 
-  chrome.storage.local.set(settings, () => {
+  api.storage.local.set(settings, () => {
     // Show saved status
     const status = document.getElementById('status');
     status.classList.add('show');
@@ -618,12 +621,12 @@ function toggleAdvancedSettings() {
 
   // Save expanded state preference
   const isExpanded = content.classList.contains('expanded');
-  chrome.storage.local.set({ advancedExpanded: isExpanded });
+  api.storage.local.set({ advancedExpanded: isExpanded });
 }
 
 // Load collapsible state preference
 function loadAdvancedState() {
-  chrome.storage.local.get('advancedExpanded', (data) => {
+  api.storage.local.get('advancedExpanded', (data) => {
     if (data.advancedExpanded) {
       document.getElementById('advancedContent').classList.add('expanded');
       document.querySelector('.collapsible-arrow').classList.add('expanded');
@@ -646,12 +649,12 @@ function switchTab(tabName) {
   document.getElementById(`${tabName}-tab`).classList.add('active');
 
   // Save last active tab
-  chrome.storage.local.set({ lastActiveTab: tabName });
+  api.storage.local.set({ lastActiveTab: tabName });
 }
 
 // Load last active tab
 function loadLastActiveTab() {
-  chrome.storage.local.get('lastActiveTab', (data) => {
+  api.storage.local.get('lastActiveTab', (data) => {
     if (data.lastActiveTab) {
       switchTab(data.lastActiveTab);
     }
