@@ -271,7 +271,7 @@ class TaskListManager {
     if (this.currentListId && this.lists[this.currentListId]) {
       header.style.display = 'block';
       listTitle.textContent = this.lists[this.currentListId].name;
-      copyBtnContainer.style.display = 'block';
+      copyBtnContainer.style.display = 'flex';
     } else {
       header.style.display = 'none';
       copyBtnContainer.style.display = 'none';
@@ -712,11 +712,44 @@ document.addEventListener('DOMContentLoaded', () => {
 
   voiceVolumeSlider.addEventListener('change', saveSettings);
 
-  // Task management listeners
-  document.getElementById('newListBtn').addEventListener('click', () => {
-    const name = prompt('Enter a name for your new task list:', 'My Tasks');
-    if (name && name.trim()) {
-      taskManager.createList(name.trim());
+  // Task management listeners - New list inline input
+  const newListBtn = document.getElementById('newListBtn');
+  const newListInputContainer = document.getElementById('newListInputContainer');
+  const newListInput = document.getElementById('newListInput');
+  const newListConfirmBtn = document.getElementById('newListConfirmBtn');
+  const newListCancelBtn = document.getElementById('newListCancelBtn');
+
+  function showNewListInput() {
+    newListBtn.style.display = 'none';
+    newListInputContainer.classList.add('show');
+    newListInput.value = '';
+    newListInput.focus();
+  }
+
+  function hideNewListInput() {
+    newListInputContainer.classList.remove('show');
+    newListBtn.style.display = 'flex';
+    newListInput.value = '';
+  }
+
+  function confirmNewList() {
+    const name = newListInput.value.trim();
+    if (name) {
+      taskManager.createList(name);
+    }
+    hideNewListInput();
+  }
+
+  newListBtn.addEventListener('click', showNewListInput);
+  newListConfirmBtn.addEventListener('click', confirmNewList);
+  newListCancelBtn.addEventListener('click', hideNewListInput);
+
+  newListInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      confirmNewList();
+    } else if (e.key === 'Escape') {
+      hideNewListInput();
     }
   });
 
@@ -784,14 +817,55 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Rename list inline input
+  const listTitle = document.getElementById('listTitle');
+  const renameInputContainer = document.getElementById('renameInputContainer');
+  const renameListInput = document.getElementById('renameListInput');
+  const renameConfirmBtn = document.getElementById('renameConfirmBtn');
+  const renameCancelBtn = document.getElementById('renameCancelBtn');
+  const listMenuContainer = document.getElementById('listMenuContainer');
+
+  function showRenameInput() {
+    const currentName = taskManager.lists[taskManager.currentListId]?.name || '';
+    listTitle.style.display = 'none';
+    listMenuContainer.style.display = 'none';
+    renameInputContainer.classList.add('show');
+    renameListInput.value = currentName;
+    renameListInput.focus();
+    renameListInput.select();
+  }
+
+  function hideRenameInput() {
+    renameInputContainer.classList.remove('show');
+    listTitle.style.display = 'block';
+    listMenuContainer.style.display = 'block';
+    renameListInput.value = '';
+  }
+
+  function confirmRename() {
+    const newName = renameListInput.value.trim();
+    if (newName && taskManager.currentListId) {
+      taskManager.renameList(taskManager.currentListId, newName);
+    }
+    hideRenameInput();
+  }
+
   document.getElementById('renameListBtn').addEventListener('click', () => {
     if (taskManager.currentListId) {
-      const currentName = taskManager.lists[taskManager.currentListId].name;
-      const newName = prompt('Enter a new name for this list:', currentName);
-      if (newName && newName.trim()) {
-        taskManager.renameList(taskManager.currentListId, newName.trim());
-      }
       document.getElementById('listActions').classList.remove('show');
+      showRenameInput();
+    }
+  });
+
+  renameConfirmBtn.addEventListener('click', confirmRename);
+  renameCancelBtn.addEventListener('click', hideRenameInput);
+
+  renameListInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      confirmRename();
+    } else if (e.key === 'Escape') {
+      hideRenameInput();
     }
   });
 

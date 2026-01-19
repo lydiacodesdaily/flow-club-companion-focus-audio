@@ -16,6 +16,7 @@
       min-height: min-content;
       max-height: 450px;
       overflow-y: auto;
+      overflow-x: hidden;
       padding: 16px;
       background: #f8f9fa;
     }
@@ -408,6 +409,8 @@
 
     .copy-btn-container {
       margin-bottom: 12px;
+      display: flex;
+      justify-content: flex-end;
     }
 
     .list-switcher {
@@ -447,13 +450,12 @@
     }
 
     .copy-btn {
-      width: 100%;
-      padding: 10px 16px;
+      padding: 6px 12px;
       background: transparent;
-      color: #6B70D6;
-      border: 1.5px solid #6B70D6;
-      border-radius: 6px;
-      font-size: 13px;
+      color: #888;
+      border: 1px solid #d0d0d0;
+      border-radius: 4px;
+      font-size: 11px;
       font-weight: 500;
       cursor: pointer;
       transition: all 0.2s;
@@ -462,8 +464,8 @@
 
     .copy-btn:hover {
       background: #f8f9fe;
-      border-color: #5558B8;
-      color: #5558B8;
+      border-color: #6B70D6;
+      color: #6B70D6;
     }
 
     .copy-btn.copied {
@@ -664,6 +666,95 @@
     .new-list-btn:hover {
       background: #f8f9fe;
       border-style: solid;
+    }
+
+    /* Inline input for new list / rename */
+    .inline-input-container {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .inline-input-container.show {
+      display: flex;
+    }
+
+    .inline-input {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 14px;
+      color: #333;
+      background: white;
+      border: 1.5px solid #6B70D6;
+      border-radius: 6px;
+      outline: none;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    .inline-input:focus {
+      box-shadow: 0 0 0 3px rgba(107, 112, 214, 0.15);
+    }
+
+    .inline-input::placeholder {
+      color: #aaa;
+    }
+
+    .inline-btn-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .inline-btn {
+      flex: 1;
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+    }
+
+    .inline-btn-confirm {
+      background: #6B70D6;
+      color: white;
+    }
+
+    .inline-btn-confirm:hover {
+      background: #5558B8;
+    }
+
+    .inline-btn-cancel {
+      background: #f0f0f0;
+      color: #666;
+    }
+
+    .inline-btn-cancel:hover {
+      background: #e0e0e0;
+      color: #333;
+    }
+
+    /* Inline rename for list title */
+    .rename-input-container {
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+    }
+
+    .rename-input-container.show {
+      display: flex;
+    }
+
+    .rename-input-container .inline-input {
+      font-size: 15px;
+      font-weight: 500;
+      padding: 6px 10px;
+    }
+
+    .rename-input-container .inline-btn {
+      padding: 6px 10px;
+      font-size: 12px;
     }
 
     .empty-state {
@@ -902,7 +993,14 @@
       <div class="tasks-header" id="tasksHeader" style="display: none;">
         <div class="list-title-row">
           <div class="list-title" id="listTitle"></div>
-          <div class="list-menu-container">
+          <div class="rename-input-container" id="renameInputContainer">
+            <input type="text" class="inline-input" id="renameListInput" placeholder="List name...">
+            <div class="inline-btn-row">
+              <button class="inline-btn inline-btn-confirm" id="renameConfirmBtn">Save</button>
+              <button class="inline-btn inline-btn-cancel" id="renameCancelBtn">Cancel</button>
+            </div>
+          </div>
+          <div class="list-menu-container" id="listMenuContainer">
             <button class="list-menu-btn" id="listMenuBtn">⋯</button>
             <div class="list-actions" id="listActions">
               <button class="action-btn" id="renameListBtn">Rename</button>
@@ -936,6 +1034,14 @@
         <span>+</span> New task list
       </button>
 
+      <div class="inline-input-container" id="newListInputContainer">
+        <input type="text" class="inline-input" id="newListInput" placeholder="Enter list name...">
+        <div class="inline-btn-row">
+          <button class="inline-btn inline-btn-confirm" id="newListConfirmBtn">Create</button>
+          <button class="inline-btn inline-btn-cancel" id="newListCancelBtn">Cancel</button>
+        </div>
+      </div>
+
       <div class="microcopy">
         You can reuse lists across sessions. Tasks are stored locally in this extension — nothing is shared unless you copy it. Keep it simple — just enough to stay focused.
       </div>
@@ -943,9 +1049,7 @@
   </div>
 
   <div class="info">
-    Built by Liddy 🦥✨ · <a href="https://lydiastud.io/" target="_blank" style="color: #6B70D6; text-decoration: none; font-weight: 600;">Lydia Studio</a> · <a href="https://tally.so/r/Y50Qb5" target="_blank" style="color: #6B70D6; text-decoration: none; font-weight: 600;">Feedback</a>
-    <br>
-    <a href="https://buymeacoffee.com/lydiastudio" target="_blank" style="color: #6a8a6d; text-decoration: none; font-weight: 600;">🍵 Buy me a matcha</a>
+    Built by <a href="https://lydiastud.io/" target="_blank" style="color: #6B70D6; text-decoration: none; font-weight: 600;">Liddy</a> 🦥✨ · <a href="https://tally.so/r/Y50Qb5" target="_blank" style="color: #6B70D6; text-decoration: none; font-weight: 600;">Feedback</a> · <a href="https://buymeacoffee.com/lydiastudio" target="_blank" style="color: #6a8a6d; text-decoration: none; font-weight: 600;">🍵 Buy me a matcha</a>
   </div>
 
   <div class="status" id="status">Settings saved!</div>
