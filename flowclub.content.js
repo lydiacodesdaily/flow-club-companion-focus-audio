@@ -113,13 +113,13 @@ class AudioPlayer {
     this.audioCache = new Map();
     this.settings = {
       audioOn: true,
-      tickEnabled: false,
+      tickEnabled: true,
       voiceEnabled: true,
-      secondsCountdownEnabled: true,
+      secondsCountdownEnabled: false,
       muteDuringBreaks: true,
-      tickVolume: 0.3,
-      voiceVolume: 0.85,
-      announcementInterval: 1, // minutes
+      tickVolume: 0.08,
+      voiceVolume: 0.3,
+      announcementInterval: 5, // minutes
       tickSound: 'tick-tock' // tick-tock, tick, beep1, beep2, ding, none
     };
     this.currentTick = 0; // Alternates between 0 and 1 for tick1/tok1 (used for tick-tock mode)
