@@ -11,7 +11,7 @@ const DEFAULT_SETTINGS = {
   muteDuringBreaks: true,
   tickVolume: 0.08,
   voiceVolume: 0.3,
-  announcementInterval: 1, // minutes
+  announcementInterval: 5, // minutes
   tickSound: 'tick-tock' // tick-tock, tick, beep1, beep2, ding, none
 };
 
