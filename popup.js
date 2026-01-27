@@ -715,6 +715,13 @@ document.addEventListener('DOMContentLoaded', () => {
   loadAdvancedState();
   loadLastActiveTab();
 
+  // Display version number from manifest
+  const manifest = api.runtime.getManifest();
+  const versionElement = document.getElementById('version');
+  if (versionElement && manifest.version) {
+    versionElement.textContent = `v${manifest.version}`;
+  }
+
   // Initialize task manager
   taskManager = new TaskListManager();
 
