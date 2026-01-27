@@ -29,6 +29,7 @@ class TaskListManager {
   constructor() {
     this.lists = {};
     this.currentListId = null;
+    this.selectedTaskId = null;
     this.draggedElement = null;
     this.draggedTaskId = null;
     this.lastIdTimestamp = 0;
@@ -56,9 +57,10 @@ class TaskListManager {
   }
 
   loadData() {
-    api.storage.local.get(['taskLists', 'currentTaskListId'], (data) => {
+    api.storage.local.get(['taskLists', 'currentTaskListId', 'selectedTaskId'], (data) => {
       this.lists = data.taskLists || {};
       this.currentListId = data.currentTaskListId || null;
+      this.selectedTaskId = data.selectedTaskId || null;
 
       // If no lists exist, don't create a default one yet
       this.render();
@@ -68,7 +70,8 @@ class TaskListManager {
   saveData() {
     api.storage.local.set({
       taskLists: this.lists,
-      currentTaskListId: this.currentListId
+      currentTaskListId: this.currentListId,
+      selectedTaskId: this.selectedTaskId
     });
   }
 
@@ -136,6 +139,10 @@ class TaskListManager {
       const task = this.lists[listId].tasks.find(t => t.id === taskId);
       if (task) {
         task.completed = !task.completed;
+        // Clear selection if this task was selected
+        if (this.selectedTaskId === taskId) {
+          this.selectedTaskId = null;
+        }
         this.saveData();
         this.render();
       }
@@ -145,9 +152,40 @@ class TaskListManager {
   deleteTask(listId, taskId) {
     if (this.lists[listId]) {
       this.lists[listId].tasks = this.lists[listId].tasks.filter(t => t.id !== taskId);
+      // Clear selection if this task was selected
+      if (this.selectedTaskId === taskId) {
+        this.selectedTaskId = null;
+      }
       this.saveData();
       this.render();
     }
+  }
+
+  // Pick a random incomplete task
+  pickRandomTask() {
+    const list = this.getCurrentList();
+    if (!list) return;
+
+    // Filter incomplete tasks only
+    const incompleteTasks = list.tasks.filter(task => !task.completed);
+
+    if (incompleteTasks.length === 0) return;
+
+    // Pick a random task from incomplete tasks
+    const randomIndex = Math.floor(Math.random() * incompleteTasks.length);
+    const selectedTask = incompleteTasks[randomIndex];
+
+    this.selectedTaskId = selectedTask.id;
+    this.saveData();
+    this.render();
+
+    // Scroll to selected task if off-screen
+    setTimeout(() => {
+      const selectedElement = document.querySelector('.task-item.randomly-selected');
+      if (selectedElement) {
+        selectedElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }, 100);
   }
 
   // Edit task text (for inline editing)
@@ -281,6 +319,7 @@ class TaskListManager {
   renderTaskList() {
     const container = document.getElementById('taskListContainer');
     const addTaskInput = document.getElementById('addTaskInput');
+    const pickTaskBtn = document.getElementById('pickTaskBtn');
     const list = this.getCurrentList();
 
     if (!list) {
@@ -291,10 +330,15 @@ class TaskListManager {
         </div>
       `;
       addTaskInput.style.display = 'none';
+      pickTaskBtn.style.display = 'none';
       return;
     }
 
     addTaskInput.style.display = 'block';
+
+    // Check if there are incomplete tasks to show the pick button
+    const hasIncompleteTasks = list.tasks.some(task => !task.completed);
+    pickTaskBtn.style.display = hasIncompleteTasks ? 'block' : 'none';
 
     if (list.tasks.length === 0) {
       container.innerHTML = `
@@ -303,22 +347,26 @@ class TaskListManager {
           <p>Add your first task below.</p>
         </div>
       `;
+      pickTaskBtn.style.display = 'none';
       return;
     }
 
-    container.innerHTML = list.tasks.map((task, index) => `
-      <div class="task-item" draggable="true" data-task-id="${task.id}" data-task-index="${index}">
-        <span class="drag-handle" title="Drag to reorder">⋮⋮</span>
-        <input
-          type="checkbox"
-          class="task-checkbox"
-          ${task.completed ? 'checked' : ''}
-          data-task-id="${task.id}"
-        />
-        <div class="task-text ${task.completed ? 'completed' : ''}" data-task-id="${task.id}">${this.escapeHtml(task.text)}</div>
-        <button class="task-delete" data-task-id="${task.id}">×</button>
-      </div>
-    `).join('');
+    container.innerHTML = list.tasks.map((task, index) => {
+      const isSelected = this.selectedTaskId === task.id;
+      return `
+        <div class="task-item ${isSelected ? 'randomly-selected' : ''}" draggable="true" data-task-id="${task.id}" data-task-index="${index}">
+          <span class="drag-handle" title="Drag to reorder">⋮⋮</span>
+          <input
+            type="checkbox"
+            class="task-checkbox"
+            ${task.completed ? 'checked' : ''}
+            data-task-id="${task.id}"
+          />
+          <div class="task-text ${task.completed ? 'completed' : ''}" data-task-id="${task.id}">${this.escapeHtml(task.text)}</div>
+          <button class="task-delete" data-task-id="${task.id}">×</button>
+        </div>
+      `;
+    }).join('');
 
     // Add event listeners for checkboxes
     container.querySelectorAll('.task-checkbox').forEach(checkbox => {
@@ -755,6 +803,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('taskListDropdown').addEventListener('change', (e) => {
     taskManager.currentListId = e.target.value || null;
+    // Clear selection when switching lists
+    taskManager.selectedTaskId = null;
     taskManager.saveData();
     taskManager.render();
   });
@@ -799,6 +849,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('copyBtn').addEventListener('click', () => {
     taskManager.copyToClipboard();
+  });
+
+  document.getElementById('pickTaskBtn').addEventListener('click', () => {
+    taskManager.pickRandomTask();
   });
 
   // List menu toggle

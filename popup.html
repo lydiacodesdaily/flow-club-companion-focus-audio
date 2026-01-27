@@ -668,6 +668,47 @@
       border-style: solid;
     }
 
+    .pick-task-btn {
+      width: 100%;
+      padding: 10px 12px;
+      background: white;
+      color: #6B70D6;
+      border: 1px solid #d0d0d0;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .pick-task-btn:hover {
+      background: #f8f9fe;
+      border-color: #6B70D6;
+    }
+
+    /* Randomly selected task state */
+    .task-item.randomly-selected {
+      background: linear-gradient(135deg, #e8e9f0 0%, #f5f5ff 100%);
+      border-left: 4px solid #6B70D6;
+      padding-left: 4px;
+      box-shadow: 0 2px 8px rgba(107, 112, 214, 0.15);
+      animation: gentle-pulse 2s ease-in-out 1;
+    }
+
+    @keyframes gentle-pulse {
+      0%, 100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.02);
+      }
+    }
+
     /* Inline input for new list / rename */
     .inline-input-container {
       display: none;
@@ -1029,6 +1070,10 @@
         rows="1"
         style="display: none;"
       ></textarea>
+
+      <button class="pick-task-btn" id="pickTaskBtn" style="display: none;">
+        Can't decide? Pick for me 🎲
+      </button>
 
       <button class="new-list-btn" id="newListBtn">
         <span>+</span> New task list
