@@ -143,6 +143,11 @@ class TaskListManager {
         if (this.selectedTaskId === taskId) {
           this.selectedTaskId = null;
         }
+        // Move completed tasks to the top, preserving relative order within each group
+        const tasks = this.lists[listId].tasks;
+        const completed = tasks.filter(t => t.completed);
+        const incomplete = tasks.filter(t => !t.completed);
+        this.lists[listId].tasks = [...completed, ...incomplete];
         this.saveData();
         this.render();
       }
