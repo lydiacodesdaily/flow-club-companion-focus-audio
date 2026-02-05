@@ -690,7 +690,7 @@ function loadAdvancedState() {
 // Tab switching
 function switchTab(tabName) {
   // Update tab buttons
-  document.querySelectorAll('.tab').forEach(tab => {
+  document.querySelectorAll('.header-tab').forEach(tab => {
     tab.classList.remove('active');
   });
   document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
@@ -731,7 +731,7 @@ document.addEventListener('DOMContentLoaded', () => {
   taskManager = new TaskListManager();
 
   // Tab listeners
-  document.querySelectorAll('.tab').forEach(tab => {
+  document.querySelectorAll('.header-tab').forEach(tab => {
     tab.addEventListener('click', (e) => {
       switchTab(e.target.dataset.tab);
     });

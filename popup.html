@@ -21,11 +21,45 @@
       background: #f8f9fa;
     }
 
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
     h1 {
       font-size: 18px;
       color: #6B70D6;
-      margin-bottom: 16px;
       font-weight: 600;
+    }
+
+    .header-tabs {
+      display: flex;
+      gap: 4px;
+    }
+
+    .header-tab {
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #888;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .header-tab:hover {
+      color: #6B70D6;
+      background: rgba(107, 112, 214, 0.08);
+    }
+
+    .header-tab.active {
+      color: #6B70D6;
+      background: rgba(107, 112, 214, 0.12);
+      border-color: rgba(107, 112, 214, 0.2);
     }
 
     .section {
@@ -153,6 +187,9 @@
     }
 
     .info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       font-size: 11px;
       color: #888;
       margin-top: 12px;
@@ -160,6 +197,19 @@
       background: #f0f0f0;
       border-radius: 4px;
       line-height: 1.4;
+    }
+
+    .footer-links a {
+      color: #888;
+      text-decoration: none;
+    }
+
+    .footer-links a:hover {
+      color: #6B70D6;
+    }
+
+    #version {
+      color: #999;
     }
 
     .status {
@@ -345,36 +395,6 @@
     .toggle-label-with-info {
       display: flex;
       align-items: center;
-    }
-
-    /* Tab Navigation */
-    .tabs {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 16px;
-      border-bottom: 2px solid #e0e0e0;
-    }
-
-    .tab {
-      padding: 10px 16px;
-      font-size: 14px;
-      font-weight: 500;
-      color: #666;
-      background: transparent;
-      border: none;
-      border-bottom: 2px solid transparent;
-      cursor: pointer;
-      transition: all 0.2s;
-      margin-bottom: -2px;
-    }
-
-    .tab:hover {
-      color: #6B70D6;
-    }
-
-    .tab.active {
-      color: #6B70D6;
-      border-bottom-color: #6B70D6;
     }
 
     .tab-content {
@@ -900,12 +920,12 @@
   </style>
 </head>
 <body class="loading">
-  <h1>Flow Club Companion</h1>
-
-  <!-- Tab Navigation -->
-  <div class="tabs">
-    <button class="tab active" data-tab="session">Session</button>
-    <button class="tab" data-tab="tasks">Tasks</button>
+  <div class="header">
+    <h1>Flow Club Companion</h1>
+    <div class="header-tabs">
+      <button class="header-tab active" data-tab="session">Session</button>
+      <button class="header-tab" data-tab="tasks">Tasks</button>
+    </div>
   </div>
 
   <!-- Session Tab -->
@@ -1094,7 +1114,10 @@
   </div>
 
   <div class="info">
-    Built by <a href="https://lydiastud.io/" target="_blank" style="color: #6B70D6; text-decoration: none; font-weight: 600;">Liddy</a> 🦥✨ · <a href="https://tally.so/r/Y50Qb5" target="_blank" style="color: #6B70D6; text-decoration: none; font-weight: 600;">Feedback</a> · <a href="https://www.lydiastud.io/flow-club-companion" target="_blank" style="color: #6B70D6; text-decoration: none; font-weight: 600;">Guide</a> · <a href="https://buymeacoffee.com/lydiastudio" target="_blank" style="color: #6a8a6d; text-decoration: none; font-weight: 600;">🍵 Buy me a matcha</a> · <span id="version" style="color: #999;">Loading...</span>
+    <span class="footer-links">
+      <a href="https://tally.so/r/Y50Qb5" target="_blank">Feedback</a> · <a href="https://www.lydiastud.io/flow-club-companion" target="_blank">Guide</a> · <a href="https://lydiastud.io/#newsletter" target="_blank">Get updates</a>
+    </span>
+    <span id="version">Loading...</span>
   </div>
 
   <div class="status" id="status">Settings saved!</div>

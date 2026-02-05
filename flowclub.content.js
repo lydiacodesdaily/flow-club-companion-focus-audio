@@ -67,19 +67,64 @@ function isInPreWorkPhase() {
 function isInCheckInPhase() {
   // Check if we're in the check-in phase (goal sharing after entering session)
   // This occurs after entering the session but before the first work session starts
+  //
+  // IMPORTANT: We only look at prominent UI elements (large text near the timer)
+  // to avoid false positives from users having words like "break" in their goals.
   const root = document.getElementById('root') || document.body;
-  const textContent = root.textContent || '';
 
   // Check for check-in phase text patterns
+  // These are displayed prominently in the Flow Club UI, not in user goals
   const checkInIndicators = [
     'Muting for work in',
     'share goals',
+    'celebrate',
+    'break & check in',
     'Share your goals'
   ];
 
-  return checkInIndicators.some(indicator =>
-    textContent.toLowerCase().includes(indicator.toLowerCase())
-  );
+  // More specific patterns that are unlikely to appear in goals
+  const exactBreakIndicators = [
+    'break & check in',
+    'break and check in'
+  ];
+
+  // Look for indicators in prominent text elements only (font-size >= 14px)
+  // This excludes goals/tasks which are typically in smaller text
+  const candidates = Array.from(root.querySelectorAll('div, span, p, h1, h2, h3'));
+
+  for (const el of candidates) {
+    if (!isVisible(el)) continue;
+
+    const text = (el.textContent || '').toLowerCase();
+    const fontSize = parseFloat(getComputedStyle(el).fontSize || '0');
+
+    // Only check elements with reasonably prominent text (14px+)
+    // Goals/tasks are typically 12-13px in most UIs
+    if (fontSize < 14) continue;
+
+    // Check for specific check-in indicators (high confidence)
+    for (const indicator of checkInIndicators) {
+      if (text.includes(indicator.toLowerCase())) {
+        return true;
+      }
+    }
+  }
+
+  // Also check for exact "break" as a standalone word in very large text (20px+)
+  // This catches the break phase indicator while avoiding "take a break" in goals
+  for (const el of candidates) {
+    if (!isVisible(el)) continue;
+
+    const text = (el.textContent || '').trim().toLowerCase();
+    const fontSize = parseFloat(getComputedStyle(el).fontSize || '0');
+
+    // Only very prominent text (20px+) for the generic "break" word
+    if (fontSize >= 20 && (text === 'break' || exactBreakIndicators.some(i => text.includes(i)))) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function getTimerElement() {
@@ -333,7 +378,16 @@ class AudioPlayer {
 
   // Detect if we're in a break based on initial session length or check-in phase
   detectSessionType(currentSeconds) {
+    // IMPORTANT: If we have more than 5 minutes remaining, it's definitely NOT a break
+    // Breaks at Flow Club are always 5 minutes or less
+    // This overrides any incorrect detection from page text matching
+    if (currentSeconds > 300) {
+      this.isCurrentSessionBreak = false;
+      return this.isCurrentSessionBreak;
+    }
+
     // Check if we're in the check-in phase (goal sharing) - treat this as a "break" for muting purposes
+    // Only check this for short timers (5 min or less)
     if (isInCheckInPhase()) {
       this.isCurrentSessionBreak = true;
       return this.isCurrentSessionBreak;
