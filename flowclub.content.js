@@ -46,86 +46,6 @@ function isInLounge() {
   return false;
 }
 
-function isInPreWorkPhase() {
-  // Check if we're in the pre-work phase (waiting in lounge before session starts)
-  // Look for indicators that we're still in the lounge rather than inside the session
-  const root = document.getElementById('root') || document.body;
-  const textContent = root.textContent || '';
-
-  // Check for lounge phase text patterns (before clicking "Enter Session")
-  const preWorkIndicators = [
-    'Starting in',
-    'Get ready',
-    'Starting soon'
-  ];
-
-  return preWorkIndicators.some(indicator =>
-    textContent.toLowerCase().includes(indicator.toLowerCase())
-  );
-}
-
-function isInCheckInPhase() {
-  // Check if we're in the check-in phase (goal sharing after entering session)
-  // This occurs after entering the session but before the first work session starts
-  //
-  // IMPORTANT: We only look at prominent UI elements (large text near the timer)
-  // to avoid false positives from users having words like "break" in their goals.
-  const root = document.getElementById('root') || document.body;
-
-  // Check for check-in phase text patterns
-  // These are displayed prominently in the Flow Club UI, not in user goals
-  const checkInIndicators = [
-    'Muting for work in',
-    'share goals',
-    'celebrate',
-    'break & check in',
-    'Share your goals'
-  ];
-
-  // More specific patterns that are unlikely to appear in goals
-  const exactBreakIndicators = [
-    'break & check in',
-    'break and check in'
-  ];
-
-  // Look for indicators in prominent text elements only (font-size >= 14px)
-  // This excludes goals/tasks which are typically in smaller text
-  const candidates = Array.from(root.querySelectorAll('div, span, p, h1, h2, h3'));
-
-  for (const el of candidates) {
-    if (!isVisible(el)) continue;
-
-    const text = (el.textContent || '').toLowerCase();
-    const fontSize = parseFloat(getComputedStyle(el).fontSize || '0');
-
-    // Only check elements with reasonably prominent text (14px+)
-    // Goals/tasks are typically 12-13px in most UIs
-    if (fontSize < 14) continue;
-
-    // Check for specific check-in indicators (high confidence)
-    for (const indicator of checkInIndicators) {
-      if (text.includes(indicator.toLowerCase())) {
-        return true;
-      }
-    }
-  }
-
-  // Also check for exact "break" as a standalone word in very large text (20px+)
-  // This catches the break phase indicator while avoiding "take a break" in goals
-  for (const el of candidates) {
-    if (!isVisible(el)) continue;
-
-    const text = (el.textContent || '').trim().toLowerCase();
-    const fontSize = parseFloat(getComputedStyle(el).fontSize || '0');
-
-    // Only very prominent text (20px+) for the generic "break" word
-    if (fontSize >= 20 && (text === 'break' || exactBreakIndicators.some(i => text.includes(i)))) {
-      return true;
-    }
-  }
-
-  return false;
-}
 
 function getTimerElement() {
   const root = document.getElementById('root') || document.body;
@@ -161,7 +81,6 @@ class AudioPlayer {
       tickEnabled: true,
       voiceEnabled: true,
       secondsCountdownEnabled: false,
-      muteDuringBreaks: true,
       tickVolume: 0.08,
       voiceVolume: 0.3,
       announcementInterval: 5, // minutes
@@ -169,8 +88,6 @@ class AudioPlayer {
     };
     this.currentTick = 0; // Alternates between 0 and 1 for tick1/tok1 (used for tick-tock mode)
     this.lastPlayedCues = new Set(); // Prevent duplicate plays
-    this.sessionStartSeconds = null; // Track initial session length
-    this.isCurrentSessionBreak = false; // Cache break status
 
     // Load settings from storage
     this.loadSettings();
@@ -195,7 +112,6 @@ class AudioPlayer {
       if (data.tickEnabled !== undefined) this.settings.tickEnabled = data.tickEnabled;
       if (data.voiceEnabled !== undefined) this.settings.voiceEnabled = data.voiceEnabled;
       if (data.secondsCountdownEnabled !== undefined) this.settings.secondsCountdownEnabled = data.secondsCountdownEnabled;
-      if (data.muteDuringBreaks !== undefined) this.settings.muteDuringBreaks = data.muteDuringBreaks;
       if (data.tickVolume !== undefined) this.settings.tickVolume = data.tickVolume;
       if (data.voiceVolume !== undefined) this.settings.voiceVolume = data.voiceVolume;
       if (data.announcementInterval !== undefined) this.settings.announcementInterval = data.announcementInterval;
@@ -234,9 +150,8 @@ class AudioPlayer {
     return audio;
   }
 
-  async playTick(isBreak = false) {
+  async playTick() {
     if (!this.settings.audioOn || !this.settings.tickEnabled) return;
-    if (this.settings.muteDuringBreaks && isBreak) return;
     if (this.settings.tickSound === 'none') return; // Silent mode
 
     try {
@@ -294,9 +209,8 @@ class AudioPlayer {
     }
   }
 
-  async playVoice(path, isBreak = false) {
+  async playVoice(path) {
     if (!this.settings.audioOn || !this.settings.voiceEnabled) return;
-    if (this.settings.muteDuringBreaks && isBreak) return;
 
     try {
       // Check if extension context is still valid before attempting to play
@@ -335,9 +249,8 @@ class AudioPlayer {
     }
   }
 
-  async playDing(isBreak = false) {
+  async playDing() {
     if (!this.settings.audioOn || !this.settings.voiceEnabled) return;
-    if (this.settings.muteDuringBreaks && isBreak) return;
 
     try {
       // Check if extension context is still valid before attempting to play
@@ -376,51 +289,8 @@ class AudioPlayer {
     }
   }
 
-  // Detect if we're in a break based on initial session length or check-in phase
-  detectSessionType(currentSeconds) {
-    // IMPORTANT: If we have more than 5 minutes remaining, it's definitely NOT a break
-    // Breaks at Flow Club are always 5 minutes or less
-    // This overrides any incorrect detection from page text matching
-    if (currentSeconds > 300) {
-      this.isCurrentSessionBreak = false;
-      return this.isCurrentSessionBreak;
-    }
-
-    // Check if we're in the check-in phase (goal sharing) - treat this as a "break" for muting purposes
-    // Only check this for short timers (5 min or less)
-    if (isInCheckInPhase()) {
-      this.isCurrentSessionBreak = true;
-      return this.isCurrentSessionBreak;
-    }
-
-    // If this is a new session (timer jumped up or first time), record the initial length
-    if (this.sessionStartSeconds === null || currentSeconds > this.sessionStartSeconds) {
-      this.sessionStartSeconds = currentSeconds;
-      // When joining mid-session, we need to estimate the original duration
-      // Round up to nearest minute to better detect breaks when joining late
-      const initialMinutes = Math.ceil(currentSeconds / 60);
-
-      // Check if we're in the pre-work phase (lounge, before entering session)
-      // If so, this is NOT a break, even if the timer is 2-5 minutes
-      if (isInPreWorkPhase()) {
-        this.isCurrentSessionBreak = false;
-      } else {
-        // Breaks are typically 2, 3, or 5 minutes at Flow Club
-        // When joining late, we might see 1 minute less, so accept ranges:
-        // 2-min break: might see 1-2 min remaining
-        // 3-min break: might see 2-3 min remaining
-        // 5-min break: might see 4-5 min remaining
-        // Accept 1-5 minutes as potential breaks (excludes work sessions which are 25+ min)
-        this.isCurrentSessionBreak = initialMinutes >= 1 && initialMinutes <= 5;
-      }
-    }
-    return this.isCurrentSessionBreak;
-  }
-
-  // Reset session tracking
-  resetSession() {
-    this.sessionStartSeconds = null;
-    this.isCurrentSessionBreak = false;
+  // Reset cue tracking (called when session changes)
+  resetCues() {
     this.lastPlayedCues.clear();
   }
 
@@ -440,9 +310,6 @@ class AudioPlayer {
 
     this.lastPlayedCues.add(cueKey);
 
-    // Detect session type (updates isCurrentSessionBreak on new sessions)
-    const isBreak = this.detectSessionType(remainingSeconds);
-
     // Minute announcements: Based on configured interval (e.g., every 1, 2, 3, 5, or 10 minutes)
     const minutes = Math.floor(remainingSeconds / 60);
     const seconds = remainingSeconds % 60;
@@ -451,13 +318,13 @@ class AudioPlayer {
     // Play announcement if we're on an exact minute boundary and it's a multiple of the interval
     if (seconds === 0 && minutes >= 1 && minutes <= 25 && minutes % interval === 0) {
       const minuteFile = `audio/minutes/m${String(minutes).padStart(2, '0')}.mp3`;
-      await this.playVoice(minuteFile, isBreak);
+      await this.playVoice(minuteFile);
       return; // Don't play tick on exact minute announcements
     }
 
     // Ding every 5 minutes for sessions > 25 minutes
     if (seconds === 0 && minutes > 25 && minutes % 5 === 0) {
-      await this.playDing(isBreak);
+      await this.playDing();
       return;
     }
 
@@ -467,14 +334,14 @@ class AudioPlayer {
           remainingSeconds === 30 || remainingSeconds === 20 ||
           remainingSeconds === 10) {
         const secondFile = `audio/seconds/s${remainingSeconds}.mp3`;
-        await this.playVoice(secondFile, isBreak);
+        await this.playVoice(secondFile);
         return;
       }
 
       // Final countdown: 9, 8, 7, ..., 1 (only if enabled)
       if (remainingSeconds >= 1 && remainingSeconds <= 9) {
         const secondFile = `audio/seconds/s${String(remainingSeconds).padStart(2, '0')}.mp3`;
-        await this.playVoice(secondFile, isBreak);
+        await this.playVoice(secondFile);
         return;
       }
     }
@@ -501,10 +368,10 @@ class FlowClubAudioCompanion {
   poll() {
     // Skip audio if we're in the lounge (waiting for session to start)
     if (isInLounge()) {
-      // Reset session tracking when in lounge
+      // Reset tracking when in lounge
       if (this.lastSeenSeconds !== null) {
         this.lastSeenSeconds = null;
-        this.audioPlayer.resetSession();
+        this.audioPlayer.resetCues();
         this.timerMissingCount = 0;
       }
       return;
@@ -524,7 +391,7 @@ class FlowClubAudioCompanion {
           this.lockedTimerEl = null;
           this.changeCount = 0;
           this.lastTimerTextSeen = null;
-          this.audioPlayer.resetSession();
+          this.audioPlayer.resetCues();
           this.timerMissingCount = 0;
         }
       }
@@ -548,7 +415,7 @@ class FlowClubAudioCompanion {
           this.lockedTimerEl = null;
           this.changeCount = 0;
           this.lastTimerTextSeen = null;
-          this.audioPlayer.resetSession();
+          this.audioPlayer.resetCues();
           this.timerMissingCount = 0;
         }
       }
@@ -577,7 +444,7 @@ class FlowClubAudioCompanion {
     if (hasChanged) {
       // Clear old cues when timer jumps (new session started)
       if (this.lastSeenSeconds != null && seconds > this.lastSeenSeconds + 10) {
-        this.audioPlayer.resetSession();
+        this.audioPlayer.resetCues();
       }
 
       // Process voice announcements and special cues
@@ -593,8 +460,7 @@ class FlowClubAudioCompanion {
     this.tickIntervalId = setInterval(() => {
       // Only tick if we have an active timer
       if (this.lastSeenSeconds !== null && this.lastSeenSeconds > 0) {
-        // Use cached break status (updated by detectSessionType)
-        this.audioPlayer.playTick(this.audioPlayer.isCurrentSessionBreak);
+        this.audioPlayer.playTick();
       }
     }, 1000);
   }

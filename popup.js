@@ -8,7 +8,6 @@ const DEFAULT_SETTINGS = {
   tickEnabled: true,
   voiceEnabled: true,
   secondsCountdownEnabled: false,
-  muteDuringBreaks: true,
   tickVolume: 0.08,
   voiceVolume: 0.3,
   announcementInterval: 5, // minutes
@@ -605,7 +604,6 @@ function loadSettings() {
       tickEnabled: data.tickEnabled !== undefined ? data.tickEnabled : DEFAULT_SETTINGS.tickEnabled,
       voiceEnabled: data.voiceEnabled !== undefined ? data.voiceEnabled : DEFAULT_SETTINGS.voiceEnabled,
       secondsCountdownEnabled: data.secondsCountdownEnabled !== undefined ? data.secondsCountdownEnabled : DEFAULT_SETTINGS.secondsCountdownEnabled,
-      muteDuringBreaks: data.muteDuringBreaks !== undefined ? data.muteDuringBreaks : DEFAULT_SETTINGS.muteDuringBreaks,
       tickVolume: data.tickVolume !== undefined ? data.tickVolume : DEFAULT_SETTINGS.tickVolume,
       voiceVolume: data.voiceVolume !== undefined ? data.voiceVolume : DEFAULT_SETTINGS.voiceVolume,
       announcementInterval: data.announcementInterval !== undefined ? data.announcementInterval : DEFAULT_SETTINGS.announcementInterval,
@@ -617,7 +615,6 @@ function loadSettings() {
     document.getElementById('tickEnabled').checked = settings.tickEnabled;
     document.getElementById('voiceEnabled').checked = settings.voiceEnabled;
     document.getElementById('secondsCountdownEnabled').checked = settings.secondsCountdownEnabled;
-    document.getElementById('muteDuringBreaks').checked = settings.muteDuringBreaks;
     document.getElementById('announcementInterval').value = settings.announcementInterval;
     document.getElementById('tickSound').value = settings.tickSound;
 
@@ -647,7 +644,6 @@ function saveSettings() {
     tickEnabled: document.getElementById('tickEnabled').checked,
     voiceEnabled: document.getElementById('voiceEnabled').checked,
     secondsCountdownEnabled: document.getElementById('secondsCountdownEnabled').checked,
-    muteDuringBreaks: document.getElementById('muteDuringBreaks').checked,
     tickVolume: parseInt(document.getElementById('tickVolume').value) / 100,
     voiceVolume: parseInt(document.getElementById('voiceVolume').value) / 100,
     announcementInterval: parseInt(document.getElementById('announcementInterval').value),
@@ -750,7 +746,6 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('tickEnabled').addEventListener('change', saveSettings);
   document.getElementById('voiceEnabled').addEventListener('change', saveSettings);
   document.getElementById('secondsCountdownEnabled').addEventListener('change', saveSettings);
-  document.getElementById('muteDuringBreaks').addEventListener('change', saveSettings);
 
   // Dropdown listeners
   document.getElementById('announcementInterval').addEventListener('change', saveSettings);
