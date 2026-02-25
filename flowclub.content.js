@@ -47,6 +47,7 @@ function isInLounge() {
 }
 
 
+
 function getTimerElement() {
   const root = document.getElementById('root') || document.body;
   const candidates = Array.from(root.querySelectorAll('div, span')).filter(
@@ -440,14 +441,11 @@ class FlowClubAudioCompanion {
   poll() {
     const inLounge = isInLounge();
 
-    // Handle lounge state
+    // No audio in the lounge — reset state and wait for session to start
     if (inLounge) {
       if (this.sessionPhase !== 'lounge') {
         this.sessionPhase = 'lounge';
         this.preReminderFired = false;
-      }
-      // Reset tick/voice tracking while in lounge
-      if (this.lastSeenSeconds !== null) {
         this.lastSeenSeconds = null;
         this.audioPlayer.resetCues();
         this.timerMissingCount = 0;
@@ -455,13 +453,10 @@ class FlowClubAudioCompanion {
       return;
     }
 
-    // Just left the lounge — session has started
+    // Just left the lounge — session has started; no tone, just update phase
     if (this.sessionPhase === 'lounge') {
       this.sessionPhase = 'focus';
       this.preReminderFired = false;
-      if (this.audioPlayer.settings.transitionEnabled) {
-        this.audioPlayer.playTransitionCue();
-      }
     }
 
     const candidateEl = this.lockedTimerEl?.isConnected ? this.lockedTimerEl : getTimerElement();
