@@ -1050,6 +1050,43 @@
             <input type="range" id="voiceVolume" min="0" max="100" value="85">
           </div>
         </div>
+
+        <!-- Transition Cues in Advanced -->
+        <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #e0e0e0;">
+          <div style="font-size: 13px; font-weight: 600; color: #555; margin-bottom: 10px;">Transition Cues</div>
+          <div class="toggle-group">
+            <div class="toggle-item controllable-option" id="transitionSessionStartToggle">
+              <span class="toggle-label">Session start tone</span>
+              <label class="switch">
+                <input type="checkbox" id="transitionSessionStart">
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="toggle-item controllable-option" id="transitionBreakStartToggle">
+              <span class="toggle-label">Break start tone</span>
+              <label class="switch">
+                <input type="checkbox" id="transitionBreakStart">
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="toggle-item controllable-option" id="transitionPreReminderToggle">
+              <span class="toggle-label">30-sec pre-transition reminder</span>
+              <label class="switch">
+                <input type="checkbox" id="transitionPreReminder">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="interval-control controllable-option" id="transitionSoundControl" style="margin-top: 10px;">
+            <div class="interval-label">Transition sound style</div>
+            <select id="transitionSound" class="interval-select">
+              <option value="chime">Chime</option>
+              <option value="ding">Ding</option>
+              <option value="beep1">Beep 1</option>
+              <option value="beep2">Beep 2</option>
+            </select>
+          </div>
+        </div>
       </div>
     </div>
   </div>

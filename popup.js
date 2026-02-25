@@ -11,7 +11,11 @@ const DEFAULT_SETTINGS = {
   tickVolume: 0.08,
   voiceVolume: 0.3,
   announcementInterval: 5, // minutes
-  tickSound: 'tick-tock' // tick-tock, tick, beep1, beep2, ding, none
+  tickSound: 'tick-tock', // tick-tock, tick, beep1, beep2, ding, none
+  transitionSessionStart: false,
+  transitionBreakStart: false,
+  transitionPreReminder: false,
+  transitionSound: 'chime' // chime, ding, beep1, beep2
 };
 
 // Utility: Debounce function for auto-save
@@ -607,7 +611,11 @@ function loadSettings() {
       tickVolume: data.tickVolume !== undefined ? data.tickVolume : DEFAULT_SETTINGS.tickVolume,
       voiceVolume: data.voiceVolume !== undefined ? data.voiceVolume : DEFAULT_SETTINGS.voiceVolume,
       announcementInterval: data.announcementInterval !== undefined ? data.announcementInterval : DEFAULT_SETTINGS.announcementInterval,
-      tickSound: data.tickSound !== undefined ? data.tickSound : DEFAULT_SETTINGS.tickSound
+      tickSound: data.tickSound !== undefined ? data.tickSound : DEFAULT_SETTINGS.tickSound,
+      transitionSessionStart: data.transitionSessionStart !== undefined ? data.transitionSessionStart : DEFAULT_SETTINGS.transitionSessionStart,
+      transitionBreakStart: data.transitionBreakStart !== undefined ? data.transitionBreakStart : DEFAULT_SETTINGS.transitionBreakStart,
+      transitionPreReminder: data.transitionPreReminder !== undefined ? data.transitionPreReminder : DEFAULT_SETTINGS.transitionPreReminder,
+      transitionSound: data.transitionSound !== undefined ? data.transitionSound : DEFAULT_SETTINGS.transitionSound
     };
 
     // Set all form values synchronously before removing loading class
@@ -617,6 +625,10 @@ function loadSettings() {
     document.getElementById('secondsCountdownEnabled').checked = settings.secondsCountdownEnabled;
     document.getElementById('announcementInterval').value = settings.announcementInterval;
     document.getElementById('tickSound').value = settings.tickSound;
+    document.getElementById('transitionSessionStart').checked = settings.transitionSessionStart;
+    document.getElementById('transitionBreakStart').checked = settings.transitionBreakStart;
+    document.getElementById('transitionPreReminder').checked = settings.transitionPreReminder;
+    document.getElementById('transitionSound').value = settings.transitionSound;
 
     const tickVolume = Math.round(settings.tickVolume * 100);
     const voiceVolume = Math.round(settings.voiceVolume * 100);
@@ -647,7 +659,11 @@ function saveSettings() {
     tickVolume: parseInt(document.getElementById('tickVolume').value) / 100,
     voiceVolume: parseInt(document.getElementById('voiceVolume').value) / 100,
     announcementInterval: parseInt(document.getElementById('announcementInterval').value),
-    tickSound: document.getElementById('tickSound').value
+    tickSound: document.getElementById('tickSound').value,
+    transitionSessionStart: document.getElementById('transitionSessionStart').checked,
+    transitionBreakStart: document.getElementById('transitionBreakStart').checked,
+    transitionPreReminder: document.getElementById('transitionPreReminder').checked,
+    transitionSound: document.getElementById('transitionSound').value
   };
 
   api.storage.local.set(settings, () => {
@@ -763,6 +779,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // Dropdown listeners
   document.getElementById('announcementInterval').addEventListener('change', saveSettings);
   document.getElementById('tickSound').addEventListener('change', saveSettings);
+
+  // Transition Cues listeners
+  document.getElementById('transitionSessionStart').addEventListener('change', saveSettings);
+  document.getElementById('transitionBreakStart').addEventListener('change', saveSettings);
+  document.getElementById('transitionPreReminder').addEventListener('change', saveSettings);
+  document.getElementById('transitionSound').addEventListener('change', saveSettings);
 
   // Volume slider listeners
   const tickVolumeSlider = document.getElementById('tickVolume');

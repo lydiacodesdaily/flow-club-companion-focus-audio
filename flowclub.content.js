@@ -84,7 +84,11 @@ class AudioPlayer {
       tickVolume: 0.08,
       voiceVolume: 0.3,
       announcementInterval: 5, // minutes
-      tickSound: 'tick-tock' // tick-tock, tick, beep1, beep2, ding, none
+      tickSound: 'tick-tock', // tick-tock, tick, beep1, beep2, ding, none
+      transitionSessionStart: false,
+      transitionBreakStart: false,
+      transitionPreReminder: false,
+      transitionSound: 'chime' // chime, ding, beep1, beep2
     };
     this.currentTick = 0; // Alternates between 0 and 1 for tick1/tok1 (used for tick-tock mode)
     this.lastPlayedCues = new Set(); // Prevent duplicate plays
@@ -116,6 +120,10 @@ class AudioPlayer {
       if (data.voiceVolume !== undefined) this.settings.voiceVolume = data.voiceVolume;
       if (data.announcementInterval !== undefined) this.settings.announcementInterval = data.announcementInterval;
       if (data.tickSound !== undefined) this.settings.tickSound = data.tickSound;
+      if (data.transitionSessionStart !== undefined) this.settings.transitionSessionStart = data.transitionSessionStart;
+      if (data.transitionBreakStart !== undefined) this.settings.transitionBreakStart = data.transitionBreakStart;
+      if (data.transitionPreReminder !== undefined) this.settings.transitionPreReminder = data.transitionPreReminder;
+      if (data.transitionSound !== undefined) this.settings.transitionSound = data.transitionSound;
     });
   }
 
@@ -289,6 +297,42 @@ class AudioPlayer {
     }
   }
 
+  // Play the selected transition sound at voice volume (independent of voiceEnabled)
+  async playTransitionCue() {
+    if (!this.settings.audioOn) return;
+
+    try {
+      if (!this.isExtensionContextValid()) return;
+
+      const soundMap = {
+        'chime': 'audio/effects/chime.mp3',
+        'ding': 'audio/effects/ding.mp3',
+        'beep1': 'audio/effects/beep1.mp3',
+        'beep2': 'audio/effects/beep2.mp3'
+      };
+      const file = soundMap[this.settings.transitionSound] || 'audio/effects/chime.mp3';
+
+      const audio = this.getAudio(file, this.settings.voiceVolume, true);
+      audio.load();
+      audio.currentTime = 0;
+
+      try {
+        await audio.play();
+      } catch (playErr) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        audio.load();
+        await audio.play();
+      }
+    } catch (err) {
+      if (err.message && (err.message.includes('Extension context invalidated') ||
+                          err.message.includes('Extension context') ||
+                          err.message.includes('chrome.runtime'))) {
+        return;
+      }
+      console.error('[Flow Club Audio] Transition cue playback failed:', err);
+    }
+  }
+
   // Reset cue tracking (called when session changes)
   resetCues() {
     this.lastPlayedCues.clear();
@@ -363,18 +407,35 @@ class FlowClubAudioCompanion {
     this.tickIntervalId = null;
     this.timerMissingCount = 0; // Track how many consecutive polls without timer
     this.TIMER_MISSING_THRESHOLD = 5; // Wait 5 seconds before giving up on timer
+    this.sessionPhase = 'unknown'; // 'unknown' | 'lounge' | 'focus' | 'break'
+    this.preReminderFired = false; // Tracks if 30s reminder fired for current phase
   }
 
   poll() {
-    // Skip audio if we're in the lounge (waiting for session to start)
-    if (isInLounge()) {
-      // Reset tracking when in lounge
+    const inLounge = isInLounge();
+
+    // Handle lounge state
+    if (inLounge) {
+      if (this.sessionPhase !== 'lounge') {
+        this.sessionPhase = 'lounge';
+        this.preReminderFired = false;
+      }
+      // Reset tick/voice tracking while in lounge
       if (this.lastSeenSeconds !== null) {
         this.lastSeenSeconds = null;
         this.audioPlayer.resetCues();
         this.timerMissingCount = 0;
       }
       return;
+    }
+
+    // Just left the lounge — session has started
+    if (this.sessionPhase === 'lounge') {
+      this.sessionPhase = 'focus';
+      this.preReminderFired = false;
+      if (this.audioPlayer.settings.transitionSessionStart) {
+        this.audioPlayer.playTransitionCue();
+      }
     }
 
     const candidateEl = this.lockedTimerEl?.isConnected ? this.lockedTimerEl : getTimerElement();
@@ -442,9 +503,36 @@ class FlowClubAudioCompanion {
     const hasChanged = this.lastSeenSeconds === null || this.lastSeenSeconds !== seconds;
 
     if (hasChanged) {
-      // Clear old cues when timer jumps (new session started)
+      // Detect phase transition: timer jumped up significantly = new phase started
       if (this.lastSeenSeconds != null && seconds > this.lastSeenSeconds + 10) {
         this.audioPlayer.resetCues();
+        this.preReminderFired = false;
+
+        if (this.sessionPhase === 'focus') {
+          this.sessionPhase = 'break';
+          if (this.audioPlayer.settings.transitionBreakStart) {
+            this.audioPlayer.playTransitionCue();
+          }
+        } else if (this.sessionPhase === 'break') {
+          this.sessionPhase = 'focus';
+          if (this.audioPlayer.settings.transitionSessionStart) {
+            this.audioPlayer.playTransitionCue();
+          }
+        } else {
+          // 'unknown' on first-seen jump — set phase conservatively, no tone
+          this.sessionPhase = 'focus';
+        }
+      } else if (this.lastSeenSeconds === null && this.sessionPhase === 'unknown') {
+        // First timer detected on fresh load — assume focus, no tone
+        this.sessionPhase = 'focus';
+      }
+
+      // 30-second pre-transition reminder (fires once per phase, independent of voice)
+      if (seconds === 30 && !this.preReminderFired) {
+        this.preReminderFired = true;
+        if (this.audioPlayer.settings.transitionPreReminder) {
+          this.audioPlayer.playTransitionCue();
+        }
       }
 
       // Process voice announcements and special cues
