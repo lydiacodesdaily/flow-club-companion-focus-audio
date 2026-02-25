@@ -712,6 +712,19 @@ function loadLastActiveTab() {
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+  // Pop-out window support
+  const isPopout = new URLSearchParams(window.location.search).get('popout') === '1';
+  const popoutBtn = document.getElementById('popoutBtn');
+  if (isPopout) {
+    popoutBtn.style.display = 'none';
+  } else {
+    popoutBtn.addEventListener('click', () => {
+      const url = api.runtime.getURL('popup.html') + '?popout=1';
+      api.windows.create({ url, type: 'popup', width: 432, height: 560 });
+      window.close();
+    });
+  }
+
   loadSettings();
   loadAdvancedState();
   loadLastActiveTab();

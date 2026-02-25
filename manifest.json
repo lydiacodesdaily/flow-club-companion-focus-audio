@@ -3,7 +3,7 @@
   "name": "Flow Club Companion",
   "description": "A gentle companion for Flow Club sessions with customizable focus audio and simple task lists to support time awareness and focus.",
   "version": "1.1.7",
-  "permissions": ["storage"],
+  "permissions": ["storage", "windows"],
   "host_permissions": [
     "https://in.flow.club/*"
   ],
@@ -25,8 +25,17 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["audio/**/*.mp3", "audio/**/*.m4a"],
+      "resources": ["audio/*"],
       "matches": ["https://in.flow.club/*"]
     }
-  ]
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "flow-club-companion@lydiastud.io",
+      "strict_min_version": "140.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  }
 }
