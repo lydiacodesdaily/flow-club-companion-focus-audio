@@ -85,8 +85,7 @@ class AudioPlayer {
       voiceVolume: 0.3,
       announcementInterval: 5, // minutes
       tickSound: 'tick-tock', // tick-tock, tick, beep1, beep2, ding, none
-      transitionSessionStart: false,
-      transitionBreakStart: false,
+      transitionEnabled: false,
       transitionPreReminder: false,
       transitionSound: 'chime' // chime, ding, beep1, beep2
     };
@@ -120,8 +119,7 @@ class AudioPlayer {
       if (data.voiceVolume !== undefined) this.settings.voiceVolume = data.voiceVolume;
       if (data.announcementInterval !== undefined) this.settings.announcementInterval = data.announcementInterval;
       if (data.tickSound !== undefined) this.settings.tickSound = data.tickSound;
-      if (data.transitionSessionStart !== undefined) this.settings.transitionSessionStart = data.transitionSessionStart;
-      if (data.transitionBreakStart !== undefined) this.settings.transitionBreakStart = data.transitionBreakStart;
+      if (data.transitionEnabled !== undefined) this.settings.transitionEnabled = data.transitionEnabled;
       if (data.transitionPreReminder !== undefined) this.settings.transitionPreReminder = data.transitionPreReminder;
       if (data.transitionSound !== undefined) this.settings.transitionSound = data.transitionSound;
     });
@@ -333,6 +331,34 @@ class AudioPlayer {
     }
   }
 
+  // Play the verbal "30 seconds" announcement for the pre-transition reminder (independent of voiceEnabled)
+  async playPreReminderCue() {
+    if (!this.settings.audioOn) return;
+
+    try {
+      if (!this.isExtensionContextValid()) return;
+
+      const audio = this.getAudio('audio/seconds/s30.mp3', this.settings.voiceVolume, true);
+      audio.load();
+      audio.currentTime = 0;
+
+      try {
+        await audio.play();
+      } catch (playErr) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        audio.load();
+        await audio.play();
+      }
+    } catch (err) {
+      if (err.message && (err.message.includes('Extension context invalidated') ||
+                          err.message.includes('Extension context') ||
+                          err.message.includes('chrome.runtime'))) {
+        return;
+      }
+      console.error('[Flow Club Audio] Pre-reminder cue playback failed:', err);
+    }
+  }
+
   // Reset cue tracking (called when session changes)
   resetCues() {
     this.lastPlayedCues.clear();
@@ -433,7 +459,7 @@ class FlowClubAudioCompanion {
     if (this.sessionPhase === 'lounge') {
       this.sessionPhase = 'focus';
       this.preReminderFired = false;
-      if (this.audioPlayer.settings.transitionSessionStart) {
+      if (this.audioPlayer.settings.transitionEnabled) {
         this.audioPlayer.playTransitionCue();
       }
     }
@@ -510,12 +536,12 @@ class FlowClubAudioCompanion {
 
         if (this.sessionPhase === 'focus') {
           this.sessionPhase = 'break';
-          if (this.audioPlayer.settings.transitionBreakStart) {
+          if (this.audioPlayer.settings.transitionEnabled) {
             this.audioPlayer.playTransitionCue();
           }
         } else if (this.sessionPhase === 'break') {
           this.sessionPhase = 'focus';
-          if (this.audioPlayer.settings.transitionSessionStart) {
+          if (this.audioPlayer.settings.transitionEnabled) {
             this.audioPlayer.playTransitionCue();
           }
         } else {
@@ -531,7 +557,7 @@ class FlowClubAudioCompanion {
       if (seconds === 30 && !this.preReminderFired) {
         this.preReminderFired = true;
         if (this.audioPlayer.settings.transitionPreReminder) {
-          this.audioPlayer.playTransitionCue();
+          this.audioPlayer.playPreReminderCue();
         }
       }
 
