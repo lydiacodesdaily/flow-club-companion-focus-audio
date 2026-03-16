@@ -7,7 +7,7 @@ A browser extension that adds ambient audio cues and lightweight task management
 
 **~100 active users · Chrome + Firefox · Built solo (design + engineering)**
 
-[Case Study](https://www.lydiakwag.com/projects/flow-club-companion) · [Chrome Web Store](#) · [Firefox Add-ons](#)
+[Case Study](https://www.lydiakwag.com/projects/flow-club-companion) · [Install](https://www.lydiastud.io/flow-club-companion)
 
 > Unofficial community tool, not affiliated with Flow Club.
 
@@ -121,7 +121,7 @@ Full setup guide (with screenshots): [Notion guide](https://www.notion.so/Flow-C
 
 ## Built by
 
-**Lydia Kwag (Min)** — Senior Front-End & Product Engineer
+**Lydia Kwag** — Senior Front-End & Product Engineer
 [lydiakwag.com](https://www.lydiakwag.com) · [lydiacodesdaily](https://github.com/lydiacodesdaily)
 
 Also building: [FlowMate](https://www.lydiakwag.com) — a standalone cross-platform focus timer (React Native, 1,000+ users)
