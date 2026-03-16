@@ -82,7 +82,7 @@ audio/
 
 During development, the Chrome Web Store account associated with the extension was flagged and revoked — removing the extension from the store and disconnecting ~100 active users overnight.
 
-I rebuilt: established a dedicated developer account with cleaner publishing practices, republished under the new account, and continued shipping updates without interrupting Firefox users throughout the transition.
+I rebuilt: established a dedicated developer account with cleaner publishing practices, republished under the new account, and shipped updates continuously. Firefox users were unaffected throughout the transition. The extension is fully available on both Chrome and Firefox today.
 
 The lesson: platform governance is part of the product lifecycle, not an afterthought. I now treat account hygiene and distribution risk the same way I treat any other technical dependency.
 
@@ -96,16 +96,17 @@ cd flow-club-companion-focus-audio
 ```
 
 **Chrome:**
+Install via [Chrome Web Store](https://chromewebstore.google.com/detail/flow-club-companion/onkipfjaffclamfkknfbippcjpnfbabf), or load unpacked for development:
 1. Navigate to `chrome://extensions/`
 2. Enable Developer mode
 3. Click **Load unpacked** → select this folder
 
 **Firefox:**
-Install via [Mozilla Add-ons](#) or load temporarily via `about:debugging`.
+Install via [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/flow-club-companion/) or load temporarily via `about:debugging`.
 
 > Audio cues are off by default. Refresh the Flow Club page once after enabling them.
 
-Full setup guide (with screenshots): [Notion guide](https://www.notion.so/Flow-Club-Companion-Getting-Started-Guide-2e1663a03246802981dae232646d88eb)
+Full setup guide (with screenshots): [lydiastud.io/flow-club-companion](https://www.lydiastud.io/flow-club-companion)
 
 ---
 
